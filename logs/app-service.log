@@ -1,0 +1,94 @@
+2023-03-24 04:59:48,068 ERROR api.middleware.error_handlers Thread-2 /home/generate_ideas POST : The request failed: Google returned a response with code 429
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 9, in get_trending_topics
+    pytrends.build_payload(kw_list, cat=0, timeframe='now 7-d', geo='', gprop='')
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 189, in build_payload
+    self._tokens()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 195, in _tokens
+    widget_dicts = self._get_data(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 159, in _get_data
+    raise exceptions.TooManyRequestsError.from_response(response)
+pytrends.exceptions.TooManyRequestsError: The request failed: Google returned a response with code 429
+2023-03-24 05:03:10,139 ERROR api.middleware.error_handlers Thread-2 /home/generate_ideas POST : The request failed: Google returned a response with code 429
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 9, in get_trending_topics
+    pytrends.build_payload(kw_list, cat=0, timeframe='now 7-d', geo='', gprop='')
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 189, in build_payload
+    self._tokens()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 195, in _tokens
+    widget_dicts = self._get_data(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/pytrends/request.py", line 159, in _get_data
+    raise exceptions.TooManyRequestsError.from_response(response)
+pytrends.exceptions.TooManyRequestsError: The request failed: Google returned a response with code 429
+2023-03-24 05:35:05,866 ERROR api.middleware.error_handlers Thread-9 /home/generate_content_ideas POST : The model: `davinci-codex` does not exist
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 15, in generate_content_ideas
+    response = openai.Completion.create(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/completion.py", line 25, in create
+    return super().create(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/abstract/engine_api_resource.py", line 153, in create
+    response, _, api_key = requestor.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 226, in request
+    resp, got_stream = self._interpret_response(result, stream)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 619, in _interpret_response
+    self._interpret_response_line(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 682, in _interpret_response_line
+    raise self.handle_error_response(
+openai.error.InvalidRequestError: The model: `davinci-codex` does not exist
+2023-03-24 05:36:02,447 ERROR api.middleware.error_handlers Thread-2 /home/generate_content_ideas POST : The model: `davinci-codex` does not exist
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 15, in generate_content_ideas
+    response = openai.Completion.create(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/completion.py", line 25, in create
+    return super().create(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/abstract/engine_api_resource.py", line 153, in create
+    response, _, api_key = requestor.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 226, in request
+    resp, got_stream = self._interpret_response(result, stream)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 619, in _interpret_response
+    self._interpret_response_line(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 682, in _interpret_response_line
+    raise self.handle_error_response(
+openai.error.InvalidRequestError: The model: `davinci-codex` does not exist
+2023-03-24 05:52:08,271 ERROR api.middleware.error_handlers Thread-9 /home/generate_content_brief POST : The model: `davinci-codex` does not exist
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 44, in generate_content_brief
+    response = openai.Completion.create(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/completion.py", line 25, in create
+    return super().create(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/abstract/engine_api_resource.py", line 153, in create
+    response, _, api_key = requestor.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 226, in request
+    resp, got_stream = self._interpret_response(result, stream)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 619, in _interpret_response
+    self._interpret_response_line(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 682, in _interpret_response_line
+    raise self.handle_error_response(
+openai.error.InvalidRequestError: The model: `davinci-codex` does not exist
+2023-03-24 05:52:55,078 ERROR api.middleware.error_handlers Thread-2 /home/generate_content_brief POST : The model: `davinci-codex` does not exist
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/home.py", line 43, in generate_content_brief
+    response = openai.Completion.create(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/completion.py", line 25, in create
+    return super().create(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_resources/abstract/engine_api_resource.py", line 153, in create
+    response, _, api_key = requestor.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 226, in request
+    resp, got_stream = self._interpret_response(result, stream)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 619, in _interpret_response
+    self._interpret_response_line(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/openai/api_requestor.py", line 682, in _interpret_response_line
+    raise self.handle_error_response(
+openai.error.InvalidRequestError: The model: `davinci-codex` does not exist

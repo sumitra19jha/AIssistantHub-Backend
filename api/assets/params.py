@@ -1,0 +1,1 @@
+default_session_timeout_days = 60

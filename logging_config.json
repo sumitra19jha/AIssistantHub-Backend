@@ -1,0 +1,59 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "filters": {},
+    "formatters": {
+      "simple": {
+        "format": "%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s"
+      },
+      "context": {
+        "format": "%(asctime)s %(levelname)s %(name)s %(threadName)s %(url)s %(method)s : %(message)s"
+      }
+    },
+    "handlers": {
+      "console_context": {
+        "level": "DEBUG",
+        "class": "logging.StreamHandler",
+        "formatter": "context",
+        "stream": "ext://sys.stdout"
+      },
+      "console": {
+        "level": "DEBUG",
+        "class": "logging.StreamHandler",
+        "formatter": "simple",
+        "stream": "ext://sys.stdout"
+      },
+      "file": {
+        "level": "INFO",
+        "class": "logging.handlers.RotatingFileHandler",
+        "maxBytes": 1024000,
+        "backupCount": 100,
+        "formatter": "context",
+        "filename": "./logs/app-service.log",
+        "mode": "a",
+        "encoding": "utf-8",
+        "filters": []
+      }
+    },
+    "loggers": {
+      "werkzeug": {
+        "handlers": [
+          "console"
+        ],
+        "propagate": false
+      },
+      "kafka": {
+        "handlers": [
+          "console"
+        ],
+        "propagate": false
+      },
+      "": {
+        "handlers": [
+          "console_context",
+          "file"
+        ],
+        "propagate": false
+      }
+    }
+  }

@@ -1,0 +1,91 @@
+<html>
+
+    <head>
+        <meta charset="utf-8" />
+        <title>KeywordIQ.com</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    </head>
+
+    <body style="
+      font-family: sans-serif;
+      -webkit-font-smoothing: antialiased;
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+      padding-top: 20px;
+      padding-bottom: 20px;
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    ">
+        <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+            Dear {{user|default('User', true)}},
+        </p>
+        <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+            Sorry to see you go. <br />
+            We received a request to delete your account. Please keep in mind that this will
+            <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: bold;
+        text-decoration: underline;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+                delete your account and all saved information. You will lose all the data linked to this account.
+            </p>
+            If you wish to continue, please use the OTP below:
+        </p>
+        <h4 style="
+        color: #06090f;
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 35px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+      ">
+            {{otp|default('Missing OTP - Contact Support', true)}}
+        </h4>
+        <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+            If you did not request to delete your account, let us know. <br />
+            {{domain|default('keywordiq.com', true)}}
+        </p>
+        <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+            Regards,
+        </p>
+        <p style="
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        margin-bottom: 10px;
+      ">
+            Keywordiq Team
+        </p>
+    </body>
+
+</html>
