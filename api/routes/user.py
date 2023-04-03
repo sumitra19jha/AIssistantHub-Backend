@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from config import Config
 from api.utils.request import get_parsed_data_list
 from api.controllers import user as user_controller
+from api.middleware.auth import (authenticate)
 
 bp = Blueprint("user", __name__, url_prefix="/user")
 
@@ -166,4 +167,51 @@ def login_send_otp():
     """
     return user_controller.login_send_otp(
         *get_parsed_data_list(request, ["email"])
+    )
+
+@bp.route("/logout", methods=["POST"])
+@authenticate
+def user_logout():
+    """This is used as logout api.
+    ---
+    tags:
+        - User
+    parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+        required: true
+
+    responses:
+      200:
+        description: In response, success and message are sent. Frontend should logout after successful response.
+    """
+    return user_controller.user_logout(
+      session=request.session, 
+      session_id=request.session_id
+    )
+
+@bp.route("/subscriptions", methods=["GET"])
+@authenticate
+def user_subscriptions():
+    """This is subscriptions api.
+    ---
+    tags:
+        - User
+    parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+        required: true
+
+    responses:
+      200:
+        description: In response, success and message are sent. Frontend should logout after successful response.
+    """
+    return user_controller.user_subscriptions(
+      user=request.user
     )

@@ -1,6 +1,7 @@
 import decimal
 import sys
 import traceback
+import openai
 from functools import wraps
 
 from flasgger import Swagger
@@ -14,7 +15,11 @@ from api.utils import logging_wrapper
 from api.utils.error_classes import BaseClientError
 from api.routes.home import bp as home_bp
 from api.routes.user import bp as user_bp
+from api.routes.dashboard import bp as dashboard_bp
 from config import Config
+
+
+openai.api_key=Config.OPENAI_API_KEY
 
 
 class JsonEncoder(JSONEncoder):
@@ -105,6 +110,7 @@ with app.app_context():
 
 app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(dashboard_bp)
 
 swagger = Swagger(
     app,

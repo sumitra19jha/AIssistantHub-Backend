@@ -13,6 +13,31 @@ class EmailType:
     SALES = "SALES"
     SUPPORT = "SUPPORT"
 
+class SubscriptionTypes:
+    TRIAL = "TRIAL"
+    STARTER = "STARTER"
+    PRO = "PRO"
+    ENTERPRISE = "ENTERPRISE"
+
+class UserSubscriptionStatus:
+    ISSUED = "ISSUED"
+    REVOKED = "REVOKED"
+
+class ContentTypes:
+    BLOG_POST="BLOG POST"
+    ARTICLE="ARTICLE"
+    LISTICLE="LISTICLE"
+    VIDEO_SCRIPT="VIDEO SCRIPT"
+    TWEET="TWEET"
+
+class ContentLengths:
+    SHORT="SHORT"
+    MEDIUM="MEDIUM"
+    LONG="LONG"
+
+class ContentStatus:
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
 
 class LogScope:
     INFO = "info"
@@ -58,3 +83,5 @@ class SuccessMessage:
     otp_sent = "OTP sent successfully"
     otp_verified = "OTP verified successfully"
     logged_in = "User logged in successfully"
+    logged_out = "User logged out successfully"
+    content_generated="Successfully, Generated the content."

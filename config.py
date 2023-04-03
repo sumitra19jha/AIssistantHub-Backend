@@ -16,7 +16,10 @@ class Config:
     )
     MYSQL_DB = environ.get("MYSQL_DB")
     YOUR_SEMRUSH_API_KEY = environ.get("YOUR_SEMRUSH_API_KEY")
+    
     OPENAI_API_KEY = environ.get("OPENAI_API_KEY")
+    OPENAI_MODEL = environ.get("OPENAI_MODEL")
+    
     SQLALCHEMY_ECHO_DB_COMMANDS = bool(
         environ.get("SQLALCHEMY_ECHO_DB_COMMANDS", False)
     )

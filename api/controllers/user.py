@@ -1,19 +1,24 @@
 import json
 import bcrypt
+from datetime import datetime as dt, timedelta, timezone
+from dateutil.relativedelta import relativedelta
+from http import HTTPStatus
 
 from api.utils.otp import verify_otp
 from api.utils.otp import generate_otp
-from api.middleware.error_handlers import internal_error_handler
-from api.utils.request import bad_response, response
-from api.models.user import User
-from api.models.session import Session
-from api.assets import constants
-from api.utils.send_email import send_otp_email
-from http import HTTPStatus
-from api.models import db
 from api.utils.db import add_flush_, commit_
+from api.utils.send_email import send_otp_email
+from api.utils.request import bad_response, response
 
+from api.middleware.error_handlers import internal_error_handler
 
+from api.models.user import User
+from api.models import db
+from api.models.session import Session
+from api.models.subscriptions import Subscription
+from api.models.subscription_type import SubscriptionType
+
+from api.assets import constants
 
 
 def create_session(user_id, login_method, device_details=None, ip_address=None):
@@ -42,8 +47,17 @@ def create_user(**kwargs):
     new_kwargs = {x: y for x, y in kwargs.items() if y is not None}
     user = User(**new_kwargs)
     add_flush_(user)
-
     return user
+
+def create_free_use_subscription(user):
+    subs = Subscription(
+        user_id=user.id,
+        subscription_type_id=1,
+        valid_till=(dt.utcnow() + timedelta(days=7)),
+    )
+    add_flush_(subs)
+
+    return subs
 
 
 @internal_error_handler
@@ -155,6 +169,8 @@ def user_create(name, email, password):
             status=status,
             password=hashed_password.decode("utf-8"),
         )
+
+        create_free_use_subscription(user)
 
     db.session.commit()
     return response(success=True, message=constants.SuccessMessage.otp_sent, new_user=True)
@@ -458,4 +474,46 @@ def login_send_otp(email):
     return response(
         success=True, 
         message=constants.SuccessMessage.otp_sent
+    )
+
+@internal_error_handler
+def user_logout(session, session_id):
+
+    if session is None:
+        session = Session.query.filter(Session.session_id == session_id).first()
+
+    session.status = constants.SessionCons.enum_logged_out
+    db.session.commit()
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.logged_out,
+    )
+
+@internal_error_handler
+def user_subscriptions(user):
+    subscriptions = (
+        Subscription.query
+        .filter(Subscription.user_id == user.id)
+        .all()
+    )
+
+    user_subs = []
+    for subscription in subscriptions:
+        months_diff = relativedelta(subscription.valid_till, subscription.started_on).months
+        subscription_data = {
+            "date": subscription.created_at.strftime("%Y-%m-%d"),
+            "plan": subscription.subscription_type.subscription_type,
+            "cycle": f"{months_diff} months",
+            "amount": subscription.subscription_type.subscription_price,
+            "status": subscription.status,
+            "invoice": subscription.invoice_link,
+            "renewal": subscription.valid_till.strftime("%Y-%m-%d"),
+        }
+        user_subs.append(subscription_data)
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.logged_out,
+        subscriptions=user_subs,
     )
