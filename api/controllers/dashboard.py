@@ -1,6 +1,9 @@
 from http import HTTPStatus
+from api.utils.socket import Socket
 import openai
 import tiktoken
+import requests
+import uuid
 from config import Config
 
 from api.assets import constants
@@ -33,14 +36,25 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
 
 
 
+def generate_unique_room_id():
+    return str(uuid.uuid4())
+
+
 @internal_error_handler
-def generate_content(user, type, topic, keywords, length):
+def generate_content(user, type, topic, platform, purpose, keywords, length):
     if (type == None) or type not in [
-        constants.ContentTypes.ARTICLE, 
-        constants.ContentTypes.BLOG_POST, 
-        constants.ContentTypes.LISTICLE, 
-        constants.ContentTypes.TWEET, 
-        constants.ContentTypes.VIDEO_SCRIPT
+        constants.ContentTypes.SOCIAL_MEDIA_POST,
+        constants.ContentTypes.BLOG_POST,
+        constants.ContentTypes.ARTICLE,
+        constants.ContentTypes.EMAIL_MARKETING,
+        constants.ContentTypes.NEWS_LETTER,
+        constants.ContentTypes.PRODUCT_DESCRIPTION,
+        constants.ContentTypes.CASE_STUDY,
+        constants.ContentTypes.WHITE_PAPER,
+        constants.ContentTypes.LISTICLE,
+        constants.ContentTypes.VIDEO_SCRIPT,
+        constants.ContentTypes.WEBINAR_SCRIPT,
+        constants.ContentTypes.EDUCATIONAL_CONTENT,
     ]:
         return response(
             success=False,
@@ -65,9 +79,11 @@ def generate_content(user, type, topic, keywords, length):
             message="Length of content is not provided.",
             status_code=HTTPStatus.BAD_REQUEST,
         )    
+    
+    content_length = sizeOfContent(type, length)
 
-    system_message = f"You are a {type} writing GPT working for KeywordIQ. You are writing for our client who expects a good SEO based {type}."
-    user_message = f"Write a {type} on {topic}. The length of the topic should be {length}. Include all these keywords: {keywords}"
+    system_message = f"You are a {type} writing GPT working for KeywordIQ. You are directly writing for our client."
+    user_message = f"Write a {type} on {topic}. The length of the content should be {content_length}.\nThe purpose of the content is to {purpose}.\nYour writing should be in visually appealing HTML as it is shown directly on our platform."
 
     messages=[
         {"role": "system", "content": system_message},
@@ -83,6 +99,8 @@ def generate_content(user, type, topic, keywords, length):
         system_message=system_message,
         user_message=user_message,
         model=Config.OPENAI_MODEL,
+        platform=platform,
+        purpose=platform,
     )
 
     db.session.add(content_data)
@@ -102,7 +120,6 @@ def generate_content(user, type, topic, keywords, length):
         content_data.finish_reason = assistant_response['choices'][0]['finish_reason']
         content_data.status = constants.ContentStatus.SUCCESS
     except Exception as e:
-        print(e);
         content_data.status = constants.ContentStatus.ERROR
         db.session.commit()
         return response(
@@ -113,8 +130,63 @@ def generate_content(user, type, topic, keywords, length):
     
     db.session.commit()
 
+    # Call the Node.js server to create a room
+    Socket.create_room_for_content(content_data.id, content_data.user_id)
+
     return response(
         success=True, 
         message=constants.SuccessMessage.content_generated, 
         content=content_data.model_response,
     )
+
+
+def sizeOfContent(type, length):
+    if type == constants.ContentTypes.SOCIAL_MEDIA_POST:
+        if length == constants.ContentLengths.SHORT:
+            return "50 - 100 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "100 - 200 words"
+        else:
+            return "200 - 300 words"
+    elif (type == constants.ContentTypes.BLOG_POST) or (type == constants.ContentTypes.ARTICLE) or (type == constants.ContentTypes.LISTICLE):
+        if length == constants.ContentLengths.SHORT:
+            return "300 - 500 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "500 - 1,200 words"
+        else:
+            return "1,200 - 2,500+ words"
+    elif (type == constants.ContentTypes.EMAIL_MARKETING) or (type == constants.ContentTypes.NEWS_LETTER):
+        if length == constants.ContentLengths.SHORT:
+            return "100 - 200 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "200 - 500 words"
+        else:
+            return "500 - 1,000 words"
+    elif (type == constants.ContentTypes.PRODUCT_DESCRIPTION):
+        if length == constants.ContentLengths.SHORT:
+            return "50 - 100 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "100 - 200 words"
+        else:
+            return "200 - 400 words"
+    elif (type == constants.ContentTypes.CASE_STUDY):
+        if length == constants.ContentLengths.SHORT:
+            return "500 - 1,000 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "1,000 - 2,000 words"
+        else:
+            return "2,000 - 5,000+ words"
+    elif (type == constants.ContentTypes.VIDEO_SCRIPT):
+        if length == constants.ContentLengths.SHORT:
+            return "100 - 200 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "200 - 600 words"
+        else:
+            return "600 - 1,200+ words"
+    else:
+        if length == constants.ContentLengths.SHORT:
+            return "300 - 500 words"
+        elif length == constants.ContentLengths.MEDIUM:
+            return "500 - 1,200 words"
+        else:
+            return "1,200 - 2,500+ words"

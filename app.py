@@ -4,7 +4,7 @@ import traceback
 import openai
 from functools import wraps
 
-from flasgger import Swagger
+from flasgger import Swagger, swag_from
 from flask_cors import CORS
 from flask.json import JSONEncoder
 from marshmallow import ValidationError
@@ -18,8 +18,7 @@ from api.routes.user import bp as user_bp
 from api.routes.dashboard import bp as dashboard_bp
 from config import Config
 
-
-openai.api_key=Config.OPENAI_API_KEY
+openai.api_key = Config.OPENAI_API_KEY
 
 
 class JsonEncoder(JSONEncoder):
@@ -27,12 +26,12 @@ class JsonEncoder(JSONEncoder):
         if isinstance(obj, decimal.Decimal):
             return float(obj)
         return JSONEncoder.default(self, obj)
-    
+
+
 """
 Logger
 """
 logger = logging_wrapper.Logger(__name__)
-
 
 app = Flask(__name__)
 app.json_encoder = JsonEncoder
@@ -41,7 +40,6 @@ CORS(app)
 
 @app.errorhandler(ValidationError)
 def handle_marshmallow_validation(error):
-    # Enforce type casting - Marshmallow validation error can either be dict or list
     if isinstance(error.messages, list):
         error.messages = {"validation": error.messages}
     return {
@@ -49,6 +47,7 @@ def handle_marshmallow_validation(error):
         "message": "Validation Error: One or more input fields are incorrect",
         "errors": error.messages,
     }, 400
+
 
 @app.errorhandler(BaseClientError)
 def handle_not_found_error(error):
@@ -58,7 +57,7 @@ def handle_not_found_error(error):
         "code": error.code,
     }, error.status_code
 
-# swagger apidocs UI authentication
+
 def requires_basic_auth(f):
     """Decorator to require HTTP Basic Auth for your endpoint."""
 
@@ -74,16 +73,6 @@ def requires_basic_auth(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        # NOTE: This example will require Basic Auth only when you run the
-        # app directly. For unit tests, we can't block it from getting the
-        # Swagger specs so we just allow it to go thru without auth.
-        # The following two lines of code wouldn't be needed in a normal
-        # production environment.
-
-        # Commenting this for now
-        # if __name__ != "__main__":
-        #     return f(*args, **kwargs)
-
         auth = request.authorization
         if not auth or not check_auth(auth.username, auth.password):
             return authenticate()
@@ -91,14 +80,15 @@ def requires_basic_auth(f):
 
     return decorated
 
+
 app.config["SWAGGER"] = {
     "title": "Backend APIs",
     "uiversion": 3,
-    "description": "This is a sample description",
+    "description": "This is a KeywordIQ Backend APIs",
     "version": "1.0.0",
     "termsOfService": "link here",
     "contact": {"email": "sumitra19jha@gmail.com"},
-    "ui_params": { "displayRequestDuration": "true" },
+    "ui_params": {"displayRequestDuration": "true"},
 }
 
 app.config.from_object("config.Config")
@@ -106,7 +96,6 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-
 
 app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
@@ -116,6 +105,7 @@ swagger = Swagger(
     app,
     decorators=[requires_basic_auth],
 )
+
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -131,7 +121,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         },
     )
 
+
 sys.excepthook = handle_exception
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True, port=5000)

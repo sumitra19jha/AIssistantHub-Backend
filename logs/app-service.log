@@ -147,3 +147,367 @@ Traceback (most recent call last):
     raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}.
 NotImplementedError: num_tokens_from_messages() is not presently implemented for model gpt-3.5-turbo.
     See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.
+2023-04-04 14:59:47,522 ERROR api.middleware.auth Thread-3 /dashboard/generator/content GET : (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (2013, 'Lost connection to MySQL server during query')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/auth.py", line 89, in wrapped_function
+    session = Session.query.filter(Session.session_id == session_id).first()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2752, in first
+    return self.limit(1)._iter().first()  # type: ignore
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2855, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2229, in execute
+    return self._execute_internal(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2124, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/context.py", line 253, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1414, in execute
+    return meth(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/sql/elements.py", line 486, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2326, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+sqlalchemy.exc.OperationalError: (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2023-04-04 15:37:14,370 ERROR api.middleware.auth Thread-7 /dashboard/generator/content GET : (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (2013, 'Lost connection to MySQL server during query')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/auth.py", line 89, in wrapped_function
+    session = Session.query.filter(Session.session_id == session_id).first()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2752, in first
+    return self.limit(1)._iter().first()  # type: ignore
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2855, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2229, in execute
+    return self._execute_internal(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2124, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/context.py", line 253, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1414, in execute
+    return meth(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/sql/elements.py", line 486, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2326, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+sqlalchemy.exc.OperationalError: (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2023-04-04 21:47:45,425 ERROR api.middleware.auth Thread-3 /dashboard/generator/content GET : (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (2013, 'Lost connection to MySQL server during query')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/auth.py", line 89, in wrapped_function
+    session = Session.query.filter(Session.session_id == session_id).first()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2752, in first
+    return self.limit(1)._iter().first()  # type: ignore
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2855, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2229, in execute
+    return self._execute_internal(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2124, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/context.py", line 253, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1414, in execute
+    return meth(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/sql/elements.py", line 486, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2326, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+sqlalchemy.exc.OperationalError: (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2023-04-05 05:32:11,852 ERROR api.middleware.error_handlers Thread-3 /dashboard/generator/content GET : local variable 'response' referenced before assignment
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 419, in connect
+    self.sock = ssl_wrap_socket(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 449, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 493, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 500, in wrap_socket
+    return self.sslsocket_class._create(
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1040, in _create
+    self.do_handshake()
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1309, in do_handshake
+    self._sslobj.do_handshake()
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 140, in generate_content
+    response = requests.post(node_server_url, json=room_data)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 563, in send
+    raise SSLError(e, request=request)
+requests.exceptions.SSLError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 149, in generate_content
+    return response(
+UnboundLocalError: local variable 'response' referenced before assignment
+2023-04-05 05:34:38,947 ERROR api.middleware.error_handlers Thread-3 /dashboard/generator/content GET : 'Response' object is not callable
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 143, in generate_content
+    raise Exception('Unable to create room')
+Exception: Unable to create room
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 149, in generate_content
+    return response(
+TypeError: 'Response' object is not callable
+2023-04-05 16:09:02,044 ERROR api.utils.socket Thread-3 /dashboard/generator/content GET : HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 419, in connect
+    self.sock = ssl_wrap_socket(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 449, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 493, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 500, in wrap_socket
+    return self.sslsocket_class._create(
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1040, in _create
+    self.do_handshake()
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1309, in do_handshake
+    self._sslobj.do_handshake()
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/utils/socket.py", line 29, in create_room_for_content
+    res = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 563, in send
+    raise SSLError(e, request=request)
+requests.exceptions.SSLError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+2023-04-05 16:12:27,046 ERROR api.utils.request Thread-3 /dashboard/generator/content GET : {'_content': b'{"statusCode":400,"error":"Bad Request","message":"logger is not defined"}', '_content_consumed': True, '_next': None, 'status_code': 400, 'headers': {'X-Powered-By': 'Express', 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': '74', 'ETag': 'W/"4a-wjIUXItPXP3Reiydm7oq50tE3i4"', 'Date': 'Wed, 05 Apr 2023 10:42:27 GMT', 'Connection': 'keep-alive', 'Keep-Alive': 'timeout=5'}, 'raw': <urllib3.response.HTTPResponse object at 0x7fc53d815310>, 'url': 'https://localhost:3001/room/create-room', 'encoding': 'utf-8', 'history': [], 'reason': 'Bad Request', 'cookies': <RequestsCookieJar[]>, 'elapsed': datetime.timedelta(microseconds=55020), 'request': <PreparedRequest [POST]>, 'connection': <requests.adapters.HTTPAdapter object at 0x7fc53d8076d0>, 'json': {'statusCode': 400, 'error': 'Bad Request', 'message': 'logger is not defined'}}
+2023-04-05 16:15:01,449 ERROR api.utils.request Thread-5 /dashboard/generator/content GET : {'_content': b'{"statusCode":400,"error":"Bad Request","message":"err is not defined"}', '_content_consumed': True, '_next': None, 'status_code': 400, 'headers': {'X-Powered-By': 'Express', 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': '71', 'ETag': 'W/"47-+wKz633VWL6iUXPGZYR6EDPiIfk"', 'Date': 'Wed, 05 Apr 2023 10:45:01 GMT', 'Connection': 'keep-alive', 'Keep-Alive': 'timeout=5'}, 'raw': <urllib3.response.HTTPResponse object at 0x7fc53d83d070>, 'url': 'https://localhost:3001/room/create-room', 'encoding': 'utf-8', 'history': [], 'reason': 'Bad Request', 'cookies': <RequestsCookieJar[]>, 'elapsed': datetime.timedelta(microseconds=74892), 'request': <PreparedRequest [POST]>, 'connection': <requests.adapters.HTTPAdapter object at 0x7fc53d4b5eb0>, 'json': {'statusCode': 400, 'error': 'Bad Request', 'message': 'err is not defined'}}
+2023-04-05 17:44:44,577 ERROR api.utils.socket Thread-3 /dashboard/generator/content GET : HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 419, in connect
+    self.sock = ssl_wrap_socket(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 449, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/ssl_.py", line 493, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 500, in wrap_socket
+    return self.sslsocket_class._create(
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1040, in _create
+    self.do_handshake()
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ssl.py", line 1309, in do_handshake
+    self._sslobj.do_handshake()
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/utils/socket.py", line 29, in create_room_for_content
+    res = requests.post(url, data=json.dumps(body), headers=headers, timeout=5, verify=True)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 563, in send
+    raise SSLError(e, request=request)
+requests.exceptions.SSLError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))

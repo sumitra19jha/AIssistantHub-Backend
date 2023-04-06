@@ -40,6 +40,20 @@ def user_subscriptions():
           type: string
           example: "Apple, Banana"
         required: false
+      - name: platform
+        in: query
+        description: Platform of the content
+        schema:
+          type: string
+          example: "Twitter"
+        required: false
+      - name: purpose
+        in: query
+        description: Purpose of the content
+        schema:
+          type: string
+          example: "Promotional"
+        required: false
       - name: length
         in: query
         description: Length of the content
@@ -65,6 +79,8 @@ def user_subscriptions():
       user=request.user,
       type=request.args.get("type", None),
       topic=request.args.get("topic", None),
+      platform=request.args.get("platform", None),
+      purpose=request.args.get("purpose", None),
       keywords=request.args.get("keywords", None),
       length=request.args.get("length", None),
     )

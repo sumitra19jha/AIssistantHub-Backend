@@ -12,11 +12,18 @@ class ContentStatusEnums(str, enum.Enum):
     ERROR = constants.ContentStatus.ERROR
 
 class ContentTypeEnums(str, enum.Enum):
-    BLOG_POST = constants.ContentTypes.BLOG_POST
-    ARTICLE = constants.ContentTypes.ARTICLE
+    SOCIAL_MEDIA_POST=constants.ContentTypes.SOCIAL_MEDIA_POST
+    BLOG_POST=constants.ContentTypes.BLOG_POST
+    ARTICLE=constants.ContentTypes.ARTICLE
+    EMAIL_MARKETING=constants.ContentTypes.EMAIL_MARKETING
+    NEWS_LETTER=constants.ContentTypes.NEWS_LETTER
+    PRODUCT_DESCRIPTION=constants.ContentTypes.PRODUCT_DESCRIPTION
+    CASE_STUDY=constants.ContentTypes.CASE_STUDY
+    WHITE_PAPER=constants.ContentTypes.WHITE_PAPER
     LISTICLE=constants.ContentTypes.LISTICLE
-    TWEET=constants.ContentTypes.TWEET
     VIDEO_SCRIPT=constants.ContentTypes.VIDEO_SCRIPT
+    WEBINAR_SCRIPT=constants.ContentTypes.WEBINAR_SCRIPT
+    EDUCATIONAL_CONTENT=constants.ContentTypes.EDUCATIONAL_CONTENT
 
 class ContentLengthEnums(str, enum.Enum):
     SHORT = constants.ContentLengths.SHORT
@@ -35,6 +42,8 @@ class Content(db.Model):
     length:str
     status: str
 
+    platform:str
+    purpose:str
     system_message:str
     user_message:str
     model:str
@@ -49,15 +58,17 @@ class Content(db.Model):
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
     type = db.Column(db.Enum(ContentTypeEnums), default=ContentTypeEnums.BLOG_POST, nullable=False)
-    topic=db.Column(db.String(255), nullable=False)
-    keywords=db.Column(db.String(255), nullable=True)
+    topic=db.Column(db.Text, nullable=False)
+    keywords=db.Column(db.Text, nullable=True)
     length=db.Column(db.Enum(ContentLengthEnums), default=ContentLengthEnums.SHORT, nullable=False)
     status = db.Column(db.Enum(ContentStatusEnums), nullable=True)
 
-    system_message=db.Column(db.String(255), nullable=False)
-    user_message=db.Column(db.String(255), nullable=False)
+    platform=db.Column(db.String(255), nullable=True)
+    purpose=db.Column(db.String(255), nullable=True)
+    system_message=db.Column(db.Text, nullable=False)
+    user_message=db.Column(db.Text, nullable=False)
     model=db.Column(db.String(255), nullable=False)
-    model_response=db.Column(db.String(255), nullable=True)
+    model_response=db.Column(db.Text, nullable=True)
     no_of_prompt_tokens = db.Column(db.Integer, nullable=True)
     no_of_completion_tokens = db.Column(db.Integer, nullable=True)
     finish_reason=db.Column(db.String(255), nullable=True)

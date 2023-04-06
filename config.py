@@ -31,3 +31,6 @@ class Config:
     SMTP_PORT = environ.get("SMTP_PORT")
     SMTP_EMAIL_SENDER = environ.get("SMTP_EMAIL_SENDER")
     SMTP_EMAIL_SENDER_NAME = environ.get("SMTP_EMAIL_SENDER_NAME")
+
+    RTC_AUTH_KEY=environ.get("RTC_AUTH_KEY")
+    RTC_URL=environ.get("RTC_URL")
