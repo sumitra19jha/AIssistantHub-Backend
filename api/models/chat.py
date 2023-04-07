@@ -10,6 +10,7 @@ import enum
 class ChatTypeEnums(str, enum.Enum):
     USER=constants.ChatTypes.USER
     AI=constants.ChatTypes.AI
+    SYSTEM=constants.ChatTypes.SYSTEM
 
 @dataclass
 class Chat(db.Model):

@@ -129,6 +129,14 @@ def generate_content(user, type, topic, platform, purpose, keywords, length):
             status_code=HTTPStatus.BAD_REQUEST,
         )
     
+    system_chat_instruction = Chat(
+        content_id=content_data.id,
+        user_id=content_data.user_id,
+        type=constants.ChatTypes.SYSTEM,
+        message=f"You are now an assistant content creator GPT working for KeywordIQ Company. You are doing a real time communication with our client. Be professional and very engaging."
+    );
+
+    db.session.add(system_chat_instruction)
     db.session.commit()
 
     # Call the Node.js server to create a room

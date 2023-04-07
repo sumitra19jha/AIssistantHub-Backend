@@ -26,6 +26,7 @@ class UserSubscriptionStatus:
 class ChatTypes:
     USER="USER"
     AI="AI"
+    SYSTEM="SYSTEM"
 
 class ContentTypes:
     SOCIAL_MEDIA_POST="SOCIAL MEDIA POST"
