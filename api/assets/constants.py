@@ -23,6 +23,10 @@ class UserSubscriptionStatus:
     ISSUED = "ISSUED"
     REVOKED = "REVOKED"
 
+class ChatTypes:
+    USER="USER"
+    AI="AI"
+
 class ContentTypes:
     SOCIAL_MEDIA_POST="SOCIAL MEDIA POST"
     BLOG_POST="BLOG POST"

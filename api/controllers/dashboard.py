@@ -8,6 +8,7 @@ from config import Config
 
 from api.assets import constants
 from api.models.content import Content
+from api.models.chat import Chat
 from api.models import db
 
 from api.utils.request import bad_response, response
@@ -137,6 +138,7 @@ def generate_content(user, type, topic, platform, purpose, keywords, length):
         success=True, 
         message=constants.SuccessMessage.content_generated, 
         content=content_data.model_response,
+        contentId=content_data.id,
     )
 
 

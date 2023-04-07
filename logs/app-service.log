@@ -511,3 +511,67 @@ Traceback (most recent call last):
   File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 563, in send
     raise SSLError(e, request=request)
 requests.exceptions.SSLError: HTTPSConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1108)')))
+2023-04-07 00:53:36,279 ERROR api.middleware.auth Thread-3 /dashboard/generator/content GET : (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (2013, 'Lost connection to MySQL server during query')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/auth.py", line 89, in wrapped_function
+    session = Session.query.filter(Session.session_id == session_id).first()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2752, in first
+    return self.limit(1)._iter().first()  # type: ignore
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/query.py", line 2855, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2229, in execute
+    return self._execute_internal(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/session.py", line 2124, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/orm/context.py", line 253, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1414, in execute
+    return meth(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/sql/elements.py", line 486, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2326, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 748, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 206, in execute
+    res = self._query(query)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/cursors.py", line 319, in _query
+    db.query(q)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/MySQLdb/connections.py", line 254, in query
+    _mysql.connection.query(self, query)
+sqlalchemy.exc.OperationalError: (MySQLdb.OperationalError) (2013, 'Lost connection to MySQL server during query')
+[SQL: SELECT session.id AS session_id_1, session.user_id AS session_user_id, session.session_id AS session_session_id, session.status AS session_status, session.valid_till AS session_valid_till, session.timezone AS session_timezone, session.ip_address AS session_ip_address, session.platform AS session_platform, session.platform_os_version AS session_platform_os_version, session.app_version AS session_app_version, session.device_details AS session_device_details, session.login_method AS session_login_method, session.created_at AS session_created_at, session.updated_at AS session_updated_at 
+FROM session 
+WHERE session.session_id = %s 
+ LIMIT %s]
+[parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
