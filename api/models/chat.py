@@ -3,6 +3,7 @@ from api.models.user import User
 from api.models.content import Content
 from dataclasses import dataclass
 from api.models import db
+from sqlalchemy.sql import expression
 from datetime import datetime as dt, timezone
 from api.assets import constants
 import enum
@@ -20,6 +21,7 @@ class Chat(db.Model):
     content_id:int
     user_id: int
     type: str
+    hidden:bool
     message:str
     
     created_at: dt
@@ -29,6 +31,7 @@ class Chat(db.Model):
     content_id = db.Column(db.Integer, db.ForeignKey(Content.id), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
     type = db.Column(db.Enum(ChatTypeEnums), default=ChatTypeEnums.USER, nullable=False)
+    hidden=db.Column(db.Boolean, server_default=expression.false(), nullable=False)
     message=db.Column(db.Text, nullable=False)
 
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)

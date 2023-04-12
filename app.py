@@ -1,7 +1,10 @@
-import decimal
+# pyright: reportMissingImports=false
+import os
 import sys
-import traceback
+import nltk
 import openai
+import decimal
+import traceback
 from functools import wraps
 
 from flasgger import Swagger, swag_from
@@ -16,9 +19,25 @@ from api.utils.error_classes import BaseClientError
 from api.routes.home import bp as home_bp
 from api.routes.user import bp as user_bp
 from api.routes.dashboard import bp as dashboard_bp
+from api.routes.analysis import bp as analysis_bp
 from config import Config
 
+
 openai.api_key = Config.OPENAI_API_KEY
+
+
+def download_nltk_resources():
+    nltk_resources = ['punkt', 'wordnet', 'stopwords']
+    for resource in nltk_resources:
+        try:
+            nltk.data.find(f'corpora/{resource}')
+            print(f"{resource} already downloaded.")
+        except LookupError:
+            try:
+                nltk.download(resource)
+                print(f"{resource} downloaded successfully.")
+            except LookupError:
+                print(f"Error downloading {resource}. Please try again.")
 
 
 class JsonEncoder(JSONEncoder):
@@ -100,6 +119,7 @@ with app.app_context():
 app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(analysis_bp)
 
 swagger = Swagger(
     app,
@@ -125,4 +145,5 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 if __name__ == "__main__":
+    download_nltk_resources()
     app.run(debug=True, port=5000)

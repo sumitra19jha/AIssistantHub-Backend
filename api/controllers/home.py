@@ -10,7 +10,9 @@ from textstat import textstat
 from collections import Counter
 from api.middleware.error_handlers import internal_error_handler
 
-nltk.download('punkt')
+#Only ONE TIME Download is required
+#nltk.download('punkt')
+
 openai.api_key = Config.OPENAI_API_KEY
 
 

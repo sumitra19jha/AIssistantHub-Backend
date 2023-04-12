@@ -317,7 +317,7 @@ def trends_keywords():
               example: "In this video, we'll explore the importance of digital marketing for businesses..."
     """
     return {
-        "keywords":["What is it?", "Doctor Strange?"]
+        "keywords":["Today my blog is on Generative AI", "Lets brainstorm this week content"]
     }
 
 

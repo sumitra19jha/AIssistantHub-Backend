@@ -575,3 +575,562 @@ WHERE session.session_id = %s
  LIMIT %s]
 [parameters: ('601302eca8ec8f025272acfb05696bd9', 1)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2023-04-10 16:47:24,530 ERROR api.middleware.error_handlers Thread-8 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 127, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 49, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 49, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 16:50:24,185 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 128, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 16:51:25,220 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.token.Token' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 128, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc]
+AttributeError: 'spacy.tokens.token.Token' object has no attribute 'string'
+2023-04-10 16:52:08,998 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'strip'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 128, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in get_sentiment
+    sentences = [sent.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in <listcomp>
+    sentences = [sent.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'strip'
+2023-04-10 16:53:14,162 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 128, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 50, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 16:54:25,798 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 130, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 52, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 52, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 16:54:56,841 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 129, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 51, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 51, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 16:59:26,660 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'trim'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 129, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 51, in get_sentiment
+    sentences = [sent.trim() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 51, in <listcomp>
+    sentences = [sent.trim() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'trim'
+2023-04-10 17:00:29,085 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.span.Span' object has no attribute 'string'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 127, in linkedin_analysis
+    sentiment = get_sentiment(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 49, in get_sentiment
+    sentences = [sent.string.strip() for sent in doc.sents]
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 49, in <listcomp>
+    sentences = [sent.string.strip() for sent in doc.sents]
+AttributeError: 'spacy.tokens.span.Span' object has no attribute 'string'
+2023-04-10 17:03:49,637 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 130, in linkedin_analysis
+    words_embedding = get_related_keywords(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 28, in get_related_keywords
+    related_words = keyword.similar_by_word()
+AttributeError: 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+2023-04-10 17:04:21,919 ERROR api.middleware.error_handlers Thread-3 /analysis/linkedin POST : 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 130, in linkedin_analysis
+    words_embedding = get_related_keywords(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 28, in get_related_keywords
+    related_words = keyword.similar_by_word()
+AttributeError: 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+2023-04-10 17:14:26,489 ERROR api.middleware.error_handlers Thread-4 /analysis/linkedin POST : 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 130, in linkedin_analysis
+    words_embedding = get_related_keywords(content)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 28, in get_related_keywords
+    related_words = keyword.similar_by_word()
+AttributeError: 'spacy.tokens.doc.Doc' object has no attribute 'similar_by_word'
+2023-04-10 17:29:37,558 ERROR api.middleware.error_handlers Thread-2 /analysis/linkedin POST : Object of type Token is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/analysis.py", line 143, in linkedin_analysis
+    return response(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/utils/request.py", line 12, in response
+    jsonify({"success": success, "message": message, **kwargs, **response_dict}),
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/flask/json/__init__.py", line 342, in jsonify
+    return current_app.json.response(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/flask/json/provider.py", line 309, in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=mimetype
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/flask/json/provider.py", line 230, in dumps
+    return json.dumps(obj, **kwargs)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/__init__.py", line 234, in dumps
+    return cls(
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/encoder.py", line 201, in encode
+    chunks = list(chunks)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/encoder.py", line 325, in _iterencode_list
+    yield from chunks
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/json/encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/app.py", line 30, in default
+    return JSONEncoder.default(self, obj)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/flask/json/__init__.py", line 55, in default
+    return _default(o)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/flask/json/provider.py", line 122, in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+TypeError: Object of type Token is not JSON serializable
+2023-04-11 13:55:54,934 ERROR api.middleware.error_handlers Thread-9 /dashboard/history/content GET : generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+TypeError: generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+2023-04-11 13:55:55,924 ERROR api.middleware.error_handlers Thread-10 /dashboard/history/content GET : generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+TypeError: generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+2023-04-11 13:56:58,146 ERROR api.middleware.error_handlers Thread-13 /dashboard/history/content GET : generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+TypeError: generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+2023-04-11 13:56:59,238 ERROR api.middleware.error_handlers Thread-14 /dashboard/history/content GET : generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+TypeError: generate_content() missing 6 required positional arguments: 'type', 'topic', 'platform', 'purpose', 'keywords', and 'length'
+2023-04-11 13:59:06,011 ERROR api.middleware.error_handlers Thread-4 /dashboard/history/content GET : 'Query' object is not callable
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 161, in content_history
+    Content.query(
+TypeError: 'Query' object is not callable
+2023-04-11 13:59:07,134 ERROR api.middleware.error_handlers Thread-5 /dashboard/history/content GET : 'Query' object is not callable
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 161, in content_history
+    Content.query(
+TypeError: 'Query' object is not callable
+2023-04-11 14:00:19,781 ERROR api.middleware.error_handlers Thread-4 /dashboard/history/content GET : filter() got an unexpected keyword argument 'user_id'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 161, in content_history
+    Content.query.filter(
+TypeError: filter() got an unexpected keyword argument 'user_id'
+2023-04-11 14:00:20,862 ERROR api.middleware.error_handlers Thread-5 /dashboard/history/content GET : filter() got an unexpected keyword argument 'user_id'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 161, in content_history
+    Content.query.filter(
+TypeError: filter() got an unexpected keyword argument 'user_id'
+2023-04-11 16:56:18,438 ERROR api.middleware.error_handlers Thread-4 /dashboard/history/content GET : unsupported operand type(s) for -: 'datetime.datetime' and 'str'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 202, in content_history
+    created_at = time_ago(content.created_at.replace(tzinfo=timezone.utc).isoformat())
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 23, in time_ago
+    delta = now - created_at
+TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'str'
+2023-04-11 16:56:19,979 ERROR api.middleware.error_handlers Thread-5 /dashboard/history/content GET : unsupported operand type(s) for -: 'datetime.datetime' and 'str'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 202, in content_history
+    created_at = time_ago(content.created_at.replace(tzinfo=timezone.utc).isoformat())
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 23, in time_ago
+    delta = now - created_at
+TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'str'
+2023-04-11 16:57:07,797 ERROR api.middleware.error_handlers Thread-4 /dashboard/history/content GET : can't subtract offset-naive and offset-aware datetimes
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 202, in content_history
+    created_at = time_ago(content.created_at.replace(tzinfo=timezone.utc))
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 23, in time_ago
+    delta = now - created_at
+TypeError: can't subtract offset-naive and offset-aware datetimes
+2023-04-11 16:57:09,950 ERROR api.middleware.error_handlers Thread-5 /dashboard/history/content GET : can't subtract offset-naive and offset-aware datetimes
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 202, in content_history
+    created_at = time_ago(content.created_at.replace(tzinfo=timezone.utc))
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 23, in time_ago
+    delta = now - created_at
+TypeError: can't subtract offset-naive and offset-aware datetimes
+2023-04-11 18:12:10,079 ERROR api.middleware.error_handlers Thread-14 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 235, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:12:14,225 ERROR api.middleware.error_handlers Thread-15 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 235, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:12:15,544 ERROR api.middleware.error_handlers Thread-16 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 235, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:15,021 ERROR api.middleware.error_handlers Thread-7 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:16,251 ERROR api.middleware.error_handlers Thread-8 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:17,451 ERROR api.middleware.error_handlers Thread-9 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:18,842 ERROR api.middleware.error_handlers Thread-10 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:20,251 ERROR api.middleware.error_handlers Thread-11 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:21,442 ERROR api.middleware.error_handlers Thread-12 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:22,842 ERROR api.middleware.error_handlers Thread-13 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:24,268 ERROR api.middleware.error_handlers Thread-14 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:25,802 ERROR api.middleware.error_handlers Thread-15 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:27,242 ERROR api.middleware.error_handlers Thread-16 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:28,702 ERROR api.middleware.error_handlers Thread-17 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:30,246 ERROR api.middleware.error_handlers Thread-18 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:31,681 ERROR api.middleware.error_handlers Thread-19 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:33,230 ERROR api.middleware.error_handlers Thread-20 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:34,454 ERROR api.middleware.error_handlers Thread-21 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:35,678 ERROR api.middleware.error_handlers Thread-22 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:35,922 ERROR api.middleware.error_handlers Thread-23 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:36,908 ERROR api.middleware.error_handlers Thread-28 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:37,113 ERROR api.middleware.error_handlers Thread-29 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:37,730 ERROR api.middleware.error_handlers Thread-25 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:37,734 ERROR api.middleware.error_handlers Thread-24 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:37,836 ERROR api.middleware.error_handlers Thread-26 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:37,848 ERROR api.middleware.error_handlers Thread-27 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-11 18:13:38,139 ERROR api.middleware.error_handlers Thread-30 /dashboard/content/chat/history GET : 'str' object has no attribute 'toLowerCase'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 236, in content_chat_history
+    "type": str(chat.type).toLowerCase(),
+AttributeError: 'str' object has no attribute 'toLowerCase'
+2023-04-12 03:36:00,837 ERROR api.middleware.error_handlers Thread-3 /dashboard/generator/content GET : 'str' object has no attribute 'trim'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 132, in generate_content
+    {"role": "system", "content": system_message.trim()},
+AttributeError: 'str' object has no attribute 'trim'
+2023-04-12 04:54:06,735 ERROR api.middleware.error_handlers Thread-7 /dashboard/generator/content GET : type object 'ContentTypes' has no attribute 'all'
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 25, in generate_content
+    validation_response = validate_content_input(type, topic, length)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 56, in validate_content_input
+    if not (type and type in ContentTypes.all()):
+AttributeError: type object 'ContentTypes' has no attribute 'all'
+2023-04-12 19:00:24,526 ERROR api.utils.socket Thread-7 /dashboard/generator/content GET : HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8c0aa270a0>: Failed to establish a new connection: [Errno 61] Connection refused'))
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 174, in _new_conn
+    conn = connection.create_connection(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/connection.py", line 95, in create_connection
+    raise err
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 61] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 398, in _make_request
+    conn.request(method, url, **httplib_request_kw)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 244, in request
+    super(HTTPConnection, self).request(method, url, body=body, headers=headers)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/http/client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/http/client.py", line 1276, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/http/client.py", line 1225, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/http/client.py", line 1004, in _send_output
+    self.send(msg)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/http/client.py", line 944, in send
+    self.connect()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 205, in connect
+    conn = self._new_conn()
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connection.py", line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x7f8c0aa270a0>: Failed to establish a new connection: [Errno 61] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8c0aa270a0>: Failed to establish a new connection: [Errno 61] Connection refused'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/utils/socket.py", line 29, in create_room_for_content
+    res = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/requests/adapters.py", line 565, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /room/create-room (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8c0aa270a0>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2023-04-12 19:19:54,418 ERROR api.middleware.error_handlers Thread-6 /dashboard/generator/content GET : The read operation timed out
+Traceback (most recent call last):
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/middleware/error_handlers.py", line 17, in wrapped_function
+    return f(*args, **kwargs)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 30, in generate_content
+    system_message, user_message = generate_messages(type, topic, platform, content_length, purpose)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/controllers/dashboard.py", line 90, in generate_messages
+    translated_topic = TweetUtils.translate_text(topic, language_for_tweet)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/api/utils/tweet_utils.py", line 82, in translate_text
+    translated_text = translator.translate(text, src=detected_language, dest=target_language).text
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/googletrans/client.py", line 194, in translate
+    data, response = self._translate(text, dest, src)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/googletrans/client.py", line 120, in _translate
+    r = self.client.post(url, params=params, data=data)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 824, in post
+    return self.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 600, in request
+    return self.send(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 620, in send
+    response = self.send_handling_redirects(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 647, in send_handling_redirects
+    response = self.send_handling_auth(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 684, in send_handling_auth
+    response = self.send_single_request(request, timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpx/_client.py", line 714, in send_single_request
+    ) = transport.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/connection_pool.py", line 152, in request
+    response = connection.request(
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/connection.py", line 78, in request
+    return self.connection.request(method, url, headers, stream, timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/http2.py", line 118, in request
+    return h2_stream.request(method, url, headers, stream, timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/http2.py", line 292, in request
+    status_code, headers = self.receive_response(timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/http2.py", line 344, in receive_response
+    event = self.connection.wait_for_event(self.stream_id, timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/http2.py", line 197, in wait_for_event
+    self.receive_events(timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_sync/http2.py", line 204, in receive_events
+    data = self.socket.read(self.READ_NUM_BYTES, timeout)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_backends/sync.py", line 62, in read
+    return self.sock.recv(n)
+  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/httpcore/_exceptions.py", line 12, in map_exceptions
+    raise to_exc(exc) from None
+httpcore._exceptions.ReadTimeout: The read operation timed out
+2023-04-12 19:39:31,875 ERROR __main__ MainThread   : Uncaught exception - {"exc_type": "<class 'LookupError'>", "exc_value": "\n**********************************************************************\n  Resource \u001b[93mpunkt\u001b[0m not found.\n  Please use the NLTK Downloader to obtain the resource:\n\n  \u001b[31m>>> import nltk\n  >>> nltk.download('punkt')\n  \u001b[0m\n  For more information see: https://www.nltk.org/data.html\n\n  Attempted to load \u001b[93mcorpora/punkt\u001b[0m\n\n  Searched in:\n    - '/Users/sumitra/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/share/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/nltk_data'\n    - '/usr/share/nltk_data'\n    - '/usr/local/share/nltk_data'\n    - '/usr/lib/nltk_data'\n    - '/usr/local/lib/nltk_data'\n**********************************************************************\n", "exc_traceback": "  File \"app.py\", line 145, in <module>\n    download_nltk_resources()\n  File \"app.py\", line 32, in download_nltk_resources\n    if not nltk.data.find(f'corpora/{resource}'):\n  File \"/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/nltk/data.py\", line 583, in find\n    raise LookupError(resource_not_found)\n"}
+2023-04-12 19:42:45,502 ERROR __main__ MainThread   : Uncaught exception - {"exc_type": "<class 'LookupError'>", "exc_value": "\n**********************************************************************\n  Resource \u001b[93mpunkt\u001b[0m not found.\n  Please use the NLTK Downloader to obtain the resource:\n\n  \u001b[31m>>> import nltk\n  >>> nltk.download('punkt')\n  \u001b[0m\n  For more information see: https://www.nltk.org/data.html\n\n  Attempted to load \u001b[93mcorpora/punkt\u001b[0m\n\n  Searched in:\n    - '/Users/sumitra/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/share/nltk_data'\n    - '/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/nltk_data'\n    - '/usr/share/nltk_data'\n    - '/usr/local/share/nltk_data'\n    - '/usr/lib/nltk_data'\n    - '/usr/local/lib/nltk_data'\n**********************************************************************\n", "exc_traceback": "  File \"app.py\", line 145, in <module>\n    download_nltk_resources()\n  File \"app.py\", line 32, in download_nltk_resources\n    if not nltk.data.find(f'corpora/{resource}'):\n  File \"/Users/sumitra/Desktop/ChatGPT/New_Project/env/lib/python3.8/site-packages/nltk/data.py\", line 583, in find\n    raise LookupError(resource_not_found)\n"}

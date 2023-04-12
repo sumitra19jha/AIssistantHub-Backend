@@ -17,3 +17,5 @@ smtplib
 jinja2
 pyotp
 pybreaker
+gensim==3.8.3
+googletrans==4.0.0-rc1
