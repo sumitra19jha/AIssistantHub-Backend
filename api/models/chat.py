@@ -23,6 +23,7 @@ class Chat(db.Model):
     type: str
     hidden:bool
     message:str
+    user_message_type:str
     
     created_at: dt
     updated_at: dt
@@ -33,6 +34,7 @@ class Chat(db.Model):
     type = db.Column(db.Enum(ChatTypeEnums), default=ChatTypeEnums.USER, nullable=False)
     hidden=db.Column(db.Boolean, server_default=expression.false(), nullable=False)
     message=db.Column(db.Text, nullable=False)
+    user_message_type=db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=dt.utcnow, default=dt.utcnow, nullable=False)

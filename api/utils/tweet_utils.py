@@ -125,4 +125,3 @@ class TweetUtils:
         translator = Translator()
         translated_text = translator.translate(text, src=detected_language, dest=target_language).text
         return translated_text
-

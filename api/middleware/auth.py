@@ -9,6 +9,8 @@ from api.utils import logging_wrapper
 from api.models.session import Session
 from marshmallow import ValidationError
 
+from config import Config
+
 logger = logging_wrapper.Logger(__name__)
 
 
@@ -113,6 +115,46 @@ def authenticate(f):
             return response(
                 success=False,
                 message="Internal Server Error: Authentication Module",
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    return wrapped_function
+
+
+def authenticate_internal_rtc_backend(f):
+    @wraps(f)
+    def wrapped_function(*args, **kwargs):
+        try:
+            auth_header = request.headers.get("Authorization", None)
+            if auth_header is None:
+                return response(
+                    success=False,
+                    message="Authentication Error: Auth header missing.",
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                )
+
+            auth_header_tokens = auth_header.split()
+            if len(auth_header_tokens) != 2:
+                return response(
+                    success=False,
+                    message="Authentication Error: Auth header invalid.",
+                    status_code=HTTPStatus.UNAUTHORIZED,
+                )
+
+            _, rtc_key = auth_header_tokens
+            if rtc_key == Config.RTC_AUTH_KEY:
+                return f(*args, **kwargs)
+
+            return response(
+                success=False,
+                message="Authentication Error: Invalid private key",
+                status_code=HTTPStatus.UNAUTHORIZED,
+            )
+        except Exception as e:
+            logger.exception(str(e))
+            return response(
+                success=False,
+                message="Internal Server Error: Authentication Module, private key",
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 

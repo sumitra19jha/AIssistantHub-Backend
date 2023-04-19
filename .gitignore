@@ -1,4 +1,6 @@
 .env
-dronacharya-380715-89cf9849e5c6.json
+.venv
+logs/*
+dronacharya.json
 logs/*
 lid.176.bin
