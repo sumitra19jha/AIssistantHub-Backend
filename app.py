@@ -1,4 +1,3 @@
-# pyright: reportMissingImports=false
 import os
 import sys
 import nltk
@@ -20,6 +19,7 @@ from api.routes.home import bp as home_bp
 from api.routes.user import bp as user_bp
 from api.routes.dashboard import bp as dashboard_bp
 from api.routes.analysis import bp as analysis_bp
+from api.routes.content import bp as content_bp
 from config import Config
 
 
@@ -120,6 +120,7 @@ app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(analysis_bp)
+app.register_blueprint(content_bp)
 
 swagger = Swagger(
     app,
