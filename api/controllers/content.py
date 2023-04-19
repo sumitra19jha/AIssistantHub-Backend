@@ -144,9 +144,13 @@ def update_content(user_id, user_name, content_id, message):
         user=str(user_id),
         frequency_penalty=0,
     )
+    print(assistant_response)
+    print("/n/n/n")
 
     contents_by_model = [resp_data["message"]["content"] for resp_data in assistant_response["choices"]]
-    best_content(user_message["name"], contents_by_model)
+    print(contents_by_model)
+    best_content_data = best_content(user_message["name"], contents_by_model)
+    print(best_content_data)
 
     return response(
         success=True,
