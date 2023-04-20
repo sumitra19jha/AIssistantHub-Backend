@@ -9,7 +9,7 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
 from googletrans import Translator
-from gensim.summarization import keywords as gensim_keywords
+from summa import keywords as summa_keywords
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, BartForSequenceClassification, BartTokenizer, pipeline
 
 from api.assets.tweet_constants import TweetCategory
@@ -29,7 +29,7 @@ model_for_sentiment = AutoModelForSequenceClassification.from_pretrained(sentime
 nlp = spacy.load("en_core_web_sm")
 
 # 5. Load pre-trained FastText language model for Language detection
-language_model_path = "/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/lid.176.bin"
+language_model_path = "/home/ubuntu/development/Backend/lid.176.bin"
 language_model = fasttext.load_model(language_model_path)
 
 
@@ -92,7 +92,7 @@ class TweetUtils:
     # Define the keyword extraction function
     @staticmethod
     def extract_keywords(text, num_keywords=2):
-        extracted_keywords = gensim_keywords(text, words=num_keywords, lemmatize=True)
+        extracted_keywords = summa_keywords.keywords(text, words=num_keywords, lemmatize=True)
         keyword_list = extracted_keywords.split('\n')
         return keyword_list
     

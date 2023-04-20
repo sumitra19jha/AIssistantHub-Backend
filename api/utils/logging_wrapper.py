@@ -12,9 +12,17 @@ with open("logging_config.json", "r") as file:
 
 class ContextualFilter(logging.Filter):
     def filter(self, log_record):
-        log_record.url = request.path if request else ""
-        log_record.method = request.method if request else ""
-        log_record.ip = request.environ.get("REMOTE_ADDR") if request else ""
+        log_record.url = ""
+        log_record.method = ""
+        log_record.ip = ""
+
+        if hasattr(request, "path"):
+            log_record.url = request.path
+        if hasattr(request, "method"):
+            log_record.method = request.method
+        if hasattr(request, "environ"):
+            log_record.ip = request.environ.get("REMOTE_ADDR", "")
+
         return True
 
 

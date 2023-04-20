@@ -48,6 +48,7 @@ class Content(db.Model):
     user_message:str
     model:str
     model_response:str
+    content_data:str
     no_of_prompt_tokens:int
     no_of_completion_tokens:int
     finish_reason:str
@@ -69,6 +70,7 @@ class Content(db.Model):
     user_message=db.Column(db.Text, nullable=False)
     model=db.Column(db.String(255), nullable=False)
     model_response=db.Column(db.Text, nullable=True)
+    content_data=db.Column(db.Text, nullable=True)
     no_of_prompt_tokens = db.Column(db.Integer, nullable=True)
     no_of_completion_tokens = db.Column(db.Integer, nullable=True)
     finish_reason=db.Column(db.String(255), nullable=True)

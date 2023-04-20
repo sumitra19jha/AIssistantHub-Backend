@@ -32,12 +32,14 @@ embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
 
 def best_content(prompt: str, generated_contents: List[str]) -> str:
     scores = []
+    index = 0
     for content in generated_contents:
         relevance_score = relevance(prompt, content)
         coherence_score = coherence(content)
         readability_score = readability(content)
         grammar_score = grammar_and_spelling(content)
         length_score = length(content)
+        index = index + 1
 
         # Assign weights to each metric and calculate the overall score
         total_score = (
@@ -74,7 +76,7 @@ def coherence(content: str) -> float:
     corpus = [id2word.doc2bow(text) for text in [tokens]]
 
     # Create an LDA model using Gensim
-    lda_model = gensim.models.LdaMulticore(corpus, num_topics=1, id2word=id2word, passes=2, workers=2)
+    lda_model = gensim.models.LdaMulticore(corpus, num_topics=1, id2word=id2word, passes=10, workers=2)
 
     # Calculate coherence score using the CoherenceModel from Gensim
     coherence_model_lda = CoherenceModel(model=lda_model, texts=[tokens], dictionary=id2word, coherence='c_v')
@@ -112,6 +114,10 @@ def length(content: str) -> float:
     length_score = 1 - abs(len(content) - preferred_length) / preferred_length
     return length_score
 
+def format_name(name: str) -> str:
+    formatted_name = name.replace(" ", "_")
+    return formatted_name[:64]
+
 
 @internal_error_handler
 def update_content(user_id, user_name, content_id, message):
@@ -126,13 +132,13 @@ def update_content(user_id, user_name, content_id, message):
     system_message = {
         "role": "system",
         "content": "You are a highly specialised content creator GPT. We have generated content for user and then interacted with user to understand his needs. User has provided the feedback on changes that needs to be done in content. Your job is to provide a new content.",
-        "name": "AIsstant Hub",
+        "name": "AIsstant_Hub",
     }
 
     user_message = {
         "role": "user",
         "content": f"{content_data.model_response}\n\n\"{message}\"",
-        "name": user_name,
+        "name": format_name(user_name),
     }
 
     assistant_response = openai.ChatCompletion.create(
@@ -144,16 +150,12 @@ def update_content(user_id, user_name, content_id, message):
         user=str(user_id),
         frequency_penalty=0,
     )
-    print(assistant_response)
-    print("/n/n/n")
 
     contents_by_model = [resp_data["message"]["content"] for resp_data in assistant_response["choices"]]
-    print(contents_by_model)
-    best_content_data = best_content(user_message["name"], contents_by_model)
-    print(best_content_data)
+    best_content_data = best_content(message, contents_by_model)
 
     return response(
         success=True,
         message="Content generated.",
-        content=best_content,
+        content=best_content_data,
     )

@@ -17,7 +17,7 @@ openai.api_key = Config.OPENAI_API_KEY
 
 
 # Replace this with the path to your service account key JSON file
-KEY_FILE_LOCATION = '/Users/sumitra/Desktop/ChatGPT/New_Project/Backend/dronacharya.json'
+KEY_FILE_LOCATION = '/home/ubuntu/development/Backend/dronacharya.json'
 VIEW_ID = 'YOUR_VIEW_ID'  # Replace this with your Google Analytics View ID
 
 # Set up the Google Analytics API client

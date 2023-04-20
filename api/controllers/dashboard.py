@@ -46,6 +46,7 @@ def generate_content(user, type, topic, platform, purpose, keywords, length):
         system_message, 
         user_message
     )
+
     assistant_response = get_assistant_response(
         user, 
         system_message, 
@@ -188,6 +189,7 @@ def get_assistant_response(user, system_message, user_message, content_data):
             frequency_penalty=0,
         )
         content_data.model_response = assistant_response['choices'][0]['message']['content']
+        content_data.content_data = assistant_response['choices'][0]['message']['content']
         content_data.no_of_prompt_tokens = assistant_response['usage']['prompt_tokens']
         content_data.no_of_completion_tokens = assistant_response['usage']['completion_tokens']
         content_data.finish_reason = assistant_response['choices'][0]['finish_reason']
@@ -296,4 +298,40 @@ def content_chat_history(user, content_id):
         success=True,
         message=constants.SuccessMessage.content_generated,
         history=history,
+    )
+
+@internal_error_handler
+def save_content(user, contentId, content):
+    print(content)
+    if contentId is not None and (not isinstance(contentId, int)):
+        return response(
+            success=False,
+            message="contentId(int) is invalid / empty.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+    if content is not None and (not isinstance(content, str) or content.strip() == ""):
+        return response(
+            success=False,
+            message="content(str) is invalid / empty.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+    content_db_data = (
+        Content.query
+        .filter(
+            Content.id == contentId,
+            Content.user_id == user.id,
+        )
+        .first()
+    )
+
+    content_db_data.content_data = content
+    db.session.commit()
+
+    
+    return response(
+        success=True,
+        message=constants.SuccessMessage.content_generated,
+        content=content,
     )

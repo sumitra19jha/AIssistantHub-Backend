@@ -4,3 +4,4 @@ logs/*
 dronacharya.json
 logs/*
 lid.176.bin
+__pycache__/

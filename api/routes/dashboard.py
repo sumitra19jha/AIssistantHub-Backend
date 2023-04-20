@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 
 from api.controllers import dashboard as dashboard_controller
+from api.utils.request import get_parsed_data_list
 from api.middleware.auth import (authenticate)
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
@@ -157,4 +158,43 @@ def history_of_chat_for_a_content():
     return dashboard_controller.content_chat_history(
       user=request.user,
       content_id=request.args.get("content_id", None),
+    )
+
+@bp.route('/content/save', methods=['POST'])
+@authenticate
+def register():
+    """
+    User signup api
+    ---
+    tags:
+      - User
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            contentId:
+                type: integer
+                description: The contentId
+            content:
+                type: string
+                description: The content for saving by the user
+        required:
+            - contentId
+            - content
+    responses:
+      200:
+        description: A list of generated content ideas
+        schema:
+          type: object
+          properties:
+            ideas:
+              type: array
+              items:
+                type: string
+    """
+    return dashboard_controller.save_content(
+      user=request.user,
+      *get_parsed_data_list(request, ["contentId", "content"])
     )
