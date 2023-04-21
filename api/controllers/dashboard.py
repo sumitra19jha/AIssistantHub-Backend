@@ -36,21 +36,21 @@ def generate_content(user, type, topic, platform, purpose, keywords, length):
     )
 
     content_data = create_content_data(
-        user, 
-        type, 
-        topic, 
-        platform, 
-        purpose, 
-        keywords, 
-        length, 
-        system_message, 
+        user,
+        type,
+        topic,
+        platform,
+        purpose,
+        keywords,
+        length,
+        system_message,
         user_message
     )
 
     assistant_response = get_assistant_response(
-        user, 
-        system_message, 
-        user_message, 
+        user,
+        system_message,
+        user_message,
         content_data
     )
 
@@ -207,10 +207,13 @@ def handle_chat_instruction(name_of_user, content_data):
         system_chat_prompt = ChatPrompt.social_media_system_chat_prompt()
 
         user_prompt_generated_by_system = ChatPrompt.social_media_user_chat_prompt_by_system(
-            platform=' '.join(word.capitalize() for word in content_data.platform.replace('_', ' ').split(' ')),
-            topic=' '.join(word.capitalize() for word in content_data.topic.replace('_', ' ').split(' ')),
+            platform=' '.join(word.capitalize(
+            ) for word in content_data.platform.replace('_', ' ').split(' ')),
+            topic=' '.join(word.capitalize()
+                           for word in content_data.topic.replace('_', ' ').split(' ')),
             user_name=name_of_user,
-            type=' '.join(word.capitalize() for word in content_data.type.replace('_', ' ').split(' ')),
+            type=' '.join(word.capitalize()
+                          for word in content_data.type.replace('_', ' ').split(' ')),
         )
     else:
         system_chat_prompt = f"You are now an assistant content creator GPT called 'IntelliMate' working for KeywordIQ Company. You are doing a real time communication with our client to make optimize SEO of content. The content is below: {content_data.model_response}"
@@ -237,18 +240,18 @@ def handle_chat_instruction(name_of_user, content_data):
 
 
 @internal_error_handler
-def content_history(user):
+def content_history(user, page=1, per_page=10):
     contents_data = (
         Content.query.filter(
             Content.user_id == user.id,
             Content.status == constants.ContentStatus.SUCCESS,
         )
         .order_by(Content.created_at.desc())
-        .all()
+        .paginate(page=page, per_page=per_page, error_out=False)
     )
 
     history = []
-    for content in contents_data:
+    for content in contents_data.items:
         # Create a BeautifulSoup object to parse the HTML content
         soup = BeautifulSoup(content.model_response, "html.parser")
 
@@ -270,8 +273,13 @@ def content_history(user):
         success=True,
         message=constants.SuccessMessage.content_generated,
         history=history,
+        pagination={
+            "page": contents_data.page,
+            "per_page": contents_data.per_page,
+            "total_pages": contents_data.pages,
+            "total_items": contents_data.total,
+        },
     )
-
 
 @internal_error_handler
 def content_chat_history(user, content_id):
@@ -299,6 +307,7 @@ def content_chat_history(user, content_id):
         message=constants.SuccessMessage.content_generated,
         history=history,
     )
+
 
 @internal_error_handler
 def save_content(user, contentId, content):
@@ -329,7 +338,6 @@ def save_content(user, contentId, content):
     content_db_data.content_data = content
     db.session.commit()
 
-    
     return response(
         success=True,
         message=constants.SuccessMessage.content_generated,

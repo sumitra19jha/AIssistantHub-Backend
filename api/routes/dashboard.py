@@ -90,35 +90,53 @@ def user_subscriptions():
 @bp.route("/history/content", methods=["GET"])
 @authenticate
 def history_of_user_contents():
-    """Get content history of the given user
-    ---
-    tags:
-        - Dashboard
-    parameters:
-      - name: Authorization
-        in: header
-        schema:
-          type: string
-          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
-        required: true
-    responses:
-        200:
-          description: In response, success and message are sent. Frontend should logout after successful response.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    description: Indicates if the request was successful
-                  message:
-                    type: string
-                    description: Message related to the request
-    """
-    return dashboard_controller.content_history(
-      user=request.user,
-    )
+  """Get content history of the given user
+  ---
+  tags:
+      - Dashboard
+  parameters:
+    - name: Authorization
+      in: header
+      schema:
+        type: string
+        example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+      required: true
+    - name: page
+      in: query
+      schema:
+        type: integer
+        example: 1
+      required: false
+    - name: per_page
+      in: query
+      schema:
+        type: integer
+        example: 10
+      required: false
+  responses:
+      200:
+        description: In response, success and message are sent. Frontend should logout after successful response.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  description: Indicates if the request was successful
+                message:
+                  type: string
+                  description: Message related to the request
+  """
+  page = request.args.get("page", 1, type=int)
+  per_page = request.args.get("per_page", 10, type=int)
+
+  return dashboard_controller.content_history(
+    user=request.user,
+    page=page,
+    per_page=per_page,
+  )
+
 
 
 @bp.route("/content/chat/history", methods=["GET"])
