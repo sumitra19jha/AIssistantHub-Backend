@@ -20,7 +20,7 @@ from api.middleware.error_handlers import internal_error_handler
 
 
 @internal_error_handler
-def generate_content(user, type, topic, platform, purpose, keywords, length):
+def generate_content(user, type, topic, platform, purpose, keywords, length, urls):
     validation_response = validate_content_input(type, topic, length)
     if validation_response:
         return validation_response

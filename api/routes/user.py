@@ -7,6 +7,7 @@ from api.middleware.auth import (authenticate)
 
 bp = Blueprint("user", __name__, url_prefix="/user")
 
+
 @bp.route('/register', methods=['POST'])
 def register():
     """
@@ -107,7 +108,7 @@ def signup_resend_otp():
         description: The wrong_otp field can be used by frontend to show whether the otp is wrong or not.
     """
     return user_controller.resend_otp_signup(
-      *get_parsed_data_list(request, ["email"]),
+        *get_parsed_data_list(request, ["email"]),
     )
 
 
@@ -143,6 +144,7 @@ def login():
         request.remote_addr
     )
 
+
 @bp.route("/forget-password", methods=["POST"])
 def login_send_otp():
     """This is used as send otp api in the login phone. Only email or phone is required. Can also be used for resend otp during login.
@@ -169,6 +171,7 @@ def login_send_otp():
         *get_parsed_data_list(request, ["email"])
     )
 
+
 @bp.route("/logout", methods=["POST"])
 @authenticate
 def user_logout():
@@ -189,9 +192,10 @@ def user_logout():
         description: In response, success and message are sent. Frontend should logout after successful response.
     """
     return user_controller.user_logout(
-      session=request.session, 
-      session_id=request.session_id
+        session=request.session,
+        session_id=request.session_id
     )
+
 
 @bp.route("/subscriptions", methods=["GET"])
 @authenticate
@@ -213,5 +217,28 @@ def user_subscriptions():
         description: In response, success and message are sent. Frontend should logout after successful response.
     """
     return user_controller.user_subscriptions(
-      user=request.user
+        user=request.user
+    )
+
+@bp.route("/ai/details", methods=["GET"])
+@authenticate
+def user_subscriptions_ai_details():
+    """This is subscriptions api.
+    ---
+    tags:
+        - User
+    parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+        required: true
+
+    responses:
+      200:
+        description: In response, success and message are sent. Frontend should logout after successful response.
+    """
+    return user_controller.user_subscriptions_ai_details(
+        user=request.user
     )

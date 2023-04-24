@@ -147,4 +147,4 @@ sys.excepthook = handle_exception
 
 if __name__ == "__main__":
     download_nltk_resources()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, host="0.0.0.0")

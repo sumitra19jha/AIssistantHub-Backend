@@ -6,7 +6,7 @@ from api.middleware.auth import (authenticate)
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
-@bp.route("/generator/content", methods=["GET"])
+@bp.route("/generator/content", methods=["POST"])
 @authenticate
 def user_subscriptions():
     """Generate content based on the given parameters
@@ -21,46 +21,40 @@ def user_subscriptions():
           type: string
           example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
         required: true
-      - name: type
-        in: query
-        type: string
-        description: Type of content to generate
-        enum: [BLOG POST, ARTICLE, LISTICLE, VIDEO SCRIPT, TWEET]
-        required: true
-      - name: topic
-        in: query
-        description: Topic of the content
+      - in: body
+        name: body
         schema:
-          type: string
-          example: 'Sample topic'
-        required: false
-      - name: keywords
-        in: query
-        description: List of keywords to include in the content
-        schema:
-          type: string
-          example: "Apple, Banana"
-        required: false
-      - name: platform
-        in: query
-        description: Platform of the content
-        schema:
-          type: string
-          example: "Twitter"
-        required: false
-      - name: purpose
-        in: query
-        description: Purpose of the content
-        schema:
-          type: string
-          example: "Promotional"
-        required: false
-      - name: length
-        in: query
-        description: Length of the content
-        type: string
-        enum: [SHORT, MEDIUM, LONG]
-        required: true
+          type: object
+          properties:
+            type:
+                type: string
+                description: Type of content to generate
+                enum: [BLOG POST, ARTICLE, LISTICLE, VIDEO SCRIPT, TWEET]
+            topic:
+                type: string
+                description: Topic of the content
+            keywords:
+                type: string
+                description: List of keywords to include in the content
+            platform:
+                type: string
+                description: Platform of the content
+            purpose:
+                type: string
+                description: Purpose of the content
+            length:
+                type: string
+                description: Length of the content
+                enum: [SHORT, MEDIUM, LONG]
+            urls:
+                description: Urls for research
+                type: array
+                items:
+                  type: object
+        required:
+            - type
+            - topic
+            - length
     responses:
         200:
           description: In response, success and message are sent. Frontend should logout after successful response.
@@ -77,13 +71,14 @@ def user_subscriptions():
                     description: Message related to the request
     """
     return dashboard_controller.generate_content(
-      user=request.user,
-      type=request.args.get("type", None),
-      topic=request.args.get("topic", None),
-      platform=request.args.get("platform", None),
-      purpose=request.args.get("purpose", None),
-      keywords=request.args.get("keywords", None),
-      length=request.args.get("length", None),
+        user=request.user,
+        type=request.json.get("type", None),
+        topic=request.json.get("topic", None),
+        keywords=request.json.get("keywords", None),
+        platform=request.json.get("platform", None),
+        purpose=request.json.get("purpose", None),
+        length=request.json.get("length", None),
+        urls=request.json.get("urls", None),
     )
 
 
@@ -197,6 +192,8 @@ def register():
                 description: The contentId
             content:
                 type: string
+                items:
+                  type: string
                 description: The content for saving by the user
         required:
             - contentId

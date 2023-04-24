@@ -503,12 +503,11 @@ def user_subscriptions(user):
         months_diff = relativedelta(subscription.valid_till, subscription.started_on).months
         subscription_data = {
             "date": subscription.created_at.strftime("%Y-%m-%d"),
-            "plan": subscription.subscription_type.subscription_type,
-            "cycle": f"{months_diff} months",
-            "amount": subscription.subscription_type.subscription_price,
-            "status": subscription.status,
-            "invoice": subscription.invoice_link,
-            "renewal": subscription.valid_till.strftime("%Y-%m-%d"),
+            "name": "Proton",
+            "cycle": f"-",
+            "salary": 0,
+            "status": "Freemium",
+            "resume": "/proton/resume",
         }
         user_subs.append(subscription_data)
 
@@ -516,4 +515,31 @@ def user_subscriptions(user):
         success=True,
         message=constants.SuccessMessage.logged_out,
         subscriptions=user_subs,
+    )
+
+
+@internal_error_handler
+def user_subscriptions_ai_details(user):
+    subscriptions = (
+        Subscription.query
+        .filter(Subscription.user_id == user.id)
+        .all()
+    )
+
+    user_subs = []
+    for subscription in subscriptions:
+        months_diff = relativedelta(subscription.valid_till, subscription.started_on).months
+        subscription_data = {
+            "date": subscription.created_at.strftime("%Y-%m-%d"),
+            "name": "Proton",
+            "description": "Social Media Content Creator",
+            "status": "Active",
+            "resume": "/proton/resume",
+        }
+        user_subs.append(subscription_data)
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.logged_out,
+        details=user_subs,
     )
