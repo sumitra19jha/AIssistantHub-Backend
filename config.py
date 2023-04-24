@@ -32,5 +32,8 @@ class Config:
     SMTP_EMAIL_SENDER = environ.get("SMTP_EMAIL_SENDER")
     SMTP_EMAIL_SENDER_NAME = environ.get("SMTP_EMAIL_SENDER_NAME")
 
+    GOOGLE_SEARCH_API_KEY = environ.get("GOOGLE_SEARCH_API_KEY")
+    CUSTOM_SEARCH_ENGINE_ID = environ.get("CUSTOM_SEARCH_ENGINE_ID")
+
     RTC_AUTH_KEY=environ.get("RTC_AUTH_KEY")
     RTC_URL=environ.get("RTC_URL")
