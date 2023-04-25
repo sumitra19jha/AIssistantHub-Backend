@@ -51,3 +51,7 @@ class DashboardUtils:
                 return "500 - 1,200 words"
             else:
                 return "1,200 - 2,500+ words"
+
+    def format_string_for_chat(text):
+        return ' '.join(word.capitalize(
+        ) for word in text.replace('_', ' ').split(' '))

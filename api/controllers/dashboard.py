@@ -1,242 +1,222 @@
-import openai
 from bs4 import BeautifulSoup
 from http import HTTPStatus
+from api.utils.classifier_models import ClassifierModels
+from api.utils.content_db import ContentDataModel
+from api.utils.generator_models import GeneratorModels
+from api.utils.instructor import Instructor
+from api.utils.prompt import PromptGenerator
 
 from config import Config
 from api.utils.socket import Socket
 
+
 from api.assets import constants
-from api.assets.constants import ContentLengths, ContentStatus, ContentTypes, ChatTypes, ContentPrompt, ChatPrompt, SuccessMessage
+from api.utils.validator import APIInputValidator
+from api.utils.input_preprocessor import InputPreprocessor
 from api.models.content import Content
 from api.models.chat import Chat
 from api.models import db
+from api.utils.scrapper import AssistantHubScrapper
 
 from api.utils.time import TimeUtils
-from api.utils.tweet_utils import TweetUtils
-from api.utils.dashboard import DashboardUtils
 
 from api.utils.request import bad_response, response
 from api.middleware.error_handlers import internal_error_handler
 
 
 @internal_error_handler
-def generate_content(user, type, topic, platform, purpose, keywords, length, urls):
-    validation_response = validate_content_input(type, topic, length)
+def generate_content_for_social_media(user, topic, platform, keywords, length, urls, user_ip):
+    validation_response = APIInputValidator.validate_content_input_for_social_media(
+        topic, 
+        platform, 
+        length,
+    )
+    
     if validation_response:
         return validation_response
-
-    content_length = DashboardUtils.sizeOfContent(type, length)
-    system_message, user_message = generate_messages(
-        type,
-        topic,
-        platform,
-        length,
-        content_length,
-        purpose
-    )
-
-    content_data = create_content_data(
-        user,
-        type,
-        topic,
-        platform,
-        purpose,
-        keywords,
-        length,
-        system_message,
-        user_message
-    )
-
-    assistant_response = get_assistant_response(
-        user,
-        system_message,
-        user_message,
-        content_data
-    )
-
-    if assistant_response:
-        handle_chat_instruction(user.name, content_data)
-
-        # Call the Node.js server to create a room
-        Socket.create_room_for_content(content_data.id, content_data.user_id)
-
+    
+    try:
+        processed_input = InputPreprocessor.preprocess_user_input_for_social_media_post(
+            topic, 
+            urls, 
+            length, 
+            platform
+        )
+    except ValueError as e:
         return response(
-            success=True,
-            message=SuccessMessage.content_generated,
-            content=content_data.model_response,
-            contentId=content_data.id,
+            success=False,
+            message=str(e),
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+    except Exception as e:
+        return response(
+            success=False,
+            message=str(e),
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+    is_opinion = ClassifierModels.is_the_topic_opinion_based(processed_input['topic'])
+
+    if is_opinion:
+        web_searched_results = AssistantHubScrapper.search_and_crawl(
+            processed_input['topic'], 
+            user_ip,
+        )
+
+        web_content = ""
+        for result in web_searched_results:
+            web_content = web_content + result['website'] + "\n\n"
+            web_content = web_content + result['content'] + "\n\n"
+
+        system_message, user_message = PromptGenerator.generate_messages_on_opinion_for_social_media(
+            processed_input['topic'],
+            processed_input['platform'],
+            processed_input["length"],
+            web_content
         )
     else:
+        web_searched_results = None
+        system_message, user_message = PromptGenerator.generate_messages_for_social_media(
+            processed_input['topic'],
+            processed_input['platform'],
+            length,
+            processed_input["length"],
+        )
+
+    content_data = ContentDataModel.create_content_data(
+        user=user,
+        type="SOCIAL_MEDIA_POST",
+        topic=processed_input['topic'],
+        platform=processed_input['platform'],
+        keywords=keywords,
+        length=length,
+        system_message=system_message,
+        user_message=user_message,
+        purpose=None,
+    )
+
+    try:
+        assistant_response = GeneratorModels.generate_content(user, system_message, user_message)
+        ContentDataModel.update_content_model_after_successful_ai_response(assistant_response, content_data)
+    except Exception as e:
+        assistant_response = None
+        ContentDataModel.update_content_model_after_failed_ai_response(content_data)
+
+    if assistant_response == None:
         return response(
             success=False,
             message="Unable to generate the content.",
             status_code=HTTPStatus.BAD_REQUEST,
         )
+        
+    Instructor.handle_chat_instruction_for_social_media(
+        user.name,
+        content_data,
+        is_opinion,
+        web_searched_results,
+    )
+
+    # Call the Node.js server to create a room
+    Socket.create_room_for_content(
+        content_data.id, 
+        content_data.user_id,
+    )
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.content_generated,
+        content=content_data.model_response,
+        contentId=content_data.id,
+    )
 
 
-def validate_content_input(type, topic, length):
-    if not (type and type in ContentTypes.all()):
+@internal_error_handler
+def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip):
+    validation_response = APIInputValidator.validate_content_input(
+        type=type, 
+        topic=topic, 
+        length=length
+    )
+
+    if validation_response:
+        return validation_response
+
+    # Prprocessing
+    try:
+        processed_input = InputPreprocessor.preprocess_user_input(
+            topic=topic,
+            urls=urls,
+            length=length,
+        )
+    except ValueError as e:
         return response(
             success=False,
-            message="Type of content is not provided.",
+            message=str(e),
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+    except Exception as e:
+        return response(
+            success=False,
+            message=str(e),
             status_code=HTTPStatus.BAD_REQUEST,
         )
 
-    if not (topic and isinstance(topic, str)):
-        return response(
-            success=False,
-            message="Topic of content is not provided.",
-            status_code=HTTPStatus.BAD_REQUEST,
-        )
-
-    if not (length and length in ContentLengths.all()):
-        return response(
-            success=False,
-            message="Length of content is not provided.",
-            status_code=HTTPStatus.BAD_REQUEST,
-        )
-
-    return None
-
-
-def generate_messages(type, topic, platform, length, content_length, purpose):
-    if type == ContentTypes.SOCIAL_MEDIA_POST and platform == "LINKEDIN":
-        system_message = ContentPrompt.linkedin_system_message
-        user_message = ContentPrompt.linkedin_user_message(
-            topic=topic, content_length=content_length)
-
-    elif type == ContentTypes.SOCIAL_MEDIA_POST and platform == "TWITTER":
-        # Add a dictionary mapping the tweet_length values to descriptions
-        length_descriptions = {
-            "SHORT": "a short engaging tweet",
-            "MEDIUM": "a medium-length engaging tweet",
-            "LONG": "a series of engaging tweets in a thread",
-        }
-
-        # 1. GET THE LANGUAGE FROM THE TOPIC
-        language_for_tweet = TweetUtils.detect_language(topic)
-        translated_topic = TweetUtils.translate_text(topic, language_for_tweet)
-
-        preprocessed_topic = TweetUtils.preprocess_text(translated_topic)
-
-        # 2. GET UNDER WHICH CATEGORY THE TWEET COMES IN
-        category_for_tweet = TweetUtils.classify_tweet(preprocessed_topic)
-
-        # 3. GET THE SENTIMENT FOR THE TWEET
-        sentiment_for_tweet = TweetUtils.analyze_sentiment(preprocessed_topic)
-
-        # 4. GET THE KEYWORDS FROM THE TOPIC
-        keyword_for_tweet = TweetUtils.extract_keywords(preprocessed_topic)
-
-        # 5. GET THE NAMED ENTITY FROM THE TOPIC
-        named_entity_for_tweet = TweetUtils.extract_entities(
-            preprocessed_topic)
-
-        system_message = "You are a Tweet writing GPT. A highly trained AI model working for KeywordIQ. You are directly writing for our client, so only provide Tweet in your response."
-        user_message = TweetUtils.create_gpt_prompt(
-            category=category_for_tweet,
-            entities=named_entity_for_tweet,
-            keywords=keyword_for_tweet,
-            sentiment=sentiment_for_tweet,
-            topic=translated_topic,  # Use the original translated topic
-            tweet_length=length_descriptions[length],
-            additional_instructions=None if length != "LONG" else "\n\nYou can follow the below rules to create a good tweet thread:\n\n1. Outline the thread\'s structure. Determine the key points to cover and organize them in a logical sequence. This will help you create a cohesive narrative and keep your thread focused\n\n2. Begin with a hook: Start your thread with an engaging and informative Tweet that captures the attention of your audience. Introduce the topic and provide a brief overview of what the thread will cover.\n\n3. Be concise: Each Tweet in the thread should be clear and concise, focusing on one main point. Remember that you have a 280-character limit, so use words wisely.\n\n4. Use GIFs or emojis: Enhance the thread with relevant GIFs, or emojis to provide context and keep the audience engaged. Visual elements can help to break up long blocks of text and make the thread more appealing.\n\n5. Number your Tweets: Numbering Tweets (e.g., \"1/5\", \"2/5\", etc.) help the audience follow the thread more easily and indicates how many parts there are in the thread.\n\n6. Maintain consistency: Keep writing style, tone, and formatting consistent throughout the thread. This makes it easier for the audience to follow along and understand your message.\n\n7. End with a conclusion: Wrap up the thread with a concise summary, conclusion, or call to action. This gives the audience a clear takeaway and invites further engagement.",
-        )
-
-    elif type == ContentTypes.SOCIAL_MEDIA_POST:
-        system_message = ContentPrompt.social_media_post_system_message(
-            platform=platform, topic=topic, content_length=content_length)
-        user_message = ContentPrompt.social_media_post_user_message(
-            platform=platform, topic=topic, content_length=content_length)
-
-    else:
-        system_message = f"You are a {type} writing GPT working for KeywordIQ. You are directly writing for our client."
-        user_message = f"Write a {type} on {topic}. The length of the content should be {content_length}.\nThe purpose of the content is to {purpose}.\nYour writing should be in visually appealing HTML as it is shown directly on our platform."
-
-    return system_message, user_message
-
-
-def create_content_data(user, type, topic, platform, purpose, keywords, length, system_message, user_message):
-    content_data = Content(
-        user_id=user.id,
+    # 'platform': platform,
+    # 'topic': topic,
+    # 'urls': parsed_urls,
+    # 'length': content_length,
+    # 'url_contents': url_contents
+    web_searched_results = None
+    system_message, user_message = PromptGenerator.generate_messages(
         type=type,
-        topic=topic,
+        topic=processed_input['topic'],
+        content_length=processed_input["length"],
+        purpose=purpose
+    )
+
+    content_data = ContentDataModel.create_content_data(
+        user=user,
+        type=type,
+        topic=processed_input['topic'],
+        platform=None,
+        purpose=purpose,
         keywords=keywords,
         length=length,
         system_message=system_message,
-        user_message=user_message,
-        model=Config.OPENAI_MODEL,
-        platform=platform,
-        purpose=purpose,
+        user_message=user_message
     )
-    db.session.add(content_data)
-    db.session.flush()
-    return content_data
 
-
-def get_assistant_response(user, system_message, user_message, content_data):
     try:
-        assistant_response = openai.ChatCompletion.create(
-            model=Config.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.7,
-            top_p=1,
-            presence_penalty=0,
-            user=str(user.id),
-            frequency_penalty=0,
-        )
-        content_data.model_response = assistant_response['choices'][0]['message']['content']
-        content_data.content_data = assistant_response['choices'][0]['message']['content']
-        content_data.no_of_prompt_tokens = assistant_response['usage']['prompt_tokens']
-        content_data.no_of_completion_tokens = assistant_response['usage']['completion_tokens']
-        content_data.finish_reason = assistant_response['choices'][0]['finish_reason']
-        content_data.status = ContentStatus.SUCCESS
-        db.session.commit()
-        return True
+        assistant_response = GeneratorModels.generate_content(user, system_message, user_message)
+        ContentDataModel.update_content_model_after_successful_ai_response(assistant_response, content_data)
     except Exception as e:
-        content_data.status = ContentStatus.ERROR
-        db.session.commit()
-        return False
+        assistant_response = None
+        ContentDataModel.update_content_model_after_failed_ai_response(content_data)
 
-
-def handle_chat_instruction(name_of_user, content_data):
-    if content_data.type == ContentTypes.SOCIAL_MEDIA_POST:
-        system_chat_prompt = ChatPrompt.social_media_system_chat_prompt()
-
-        user_prompt_generated_by_system = ChatPrompt.social_media_user_chat_prompt_by_system(
-            platform=' '.join(word.capitalize(
-            ) for word in content_data.platform.replace('_', ' ').split(' ')),
-            topic=' '.join(word.capitalize()
-                           for word in content_data.topic.replace('_', ' ').split(' ')),
-            user_name=name_of_user,
-            type=' '.join(word.capitalize()
-                          for word in content_data.type.replace('_', ' ').split(' ')),
+    if assistant_response == None:
+        return response(
+            success=False,
+            message="Unable to generate the content.",
+            status_code=HTTPStatus.BAD_REQUEST,
         )
-    else:
-        system_chat_prompt = f"You are now an assistant content creator GPT called 'IntelliMate' working for KeywordIQ Company. You are doing a real time communication with our client to make optimize SEO of content. The content is below: {content_data.model_response}"
-        user_prompt_generated_by_system = f"Hi I am {name_of_user}."
-
-    system_chat_instruction = Chat(
-        content_id=content_data.id,
-        user_id=content_data.user_id,
-        type=ChatTypes.SYSTEM,
-        hidden=True,
-        message=system_chat_prompt,
+    
+    Instructor.handle_chat_instruction(
+        name_of_user=user.name,
+        content_data=content_data,
     )
 
-    user_chat_initiation = Chat(
-        content_id=content_data.id,
-        user_id=content_data.user_id,
-        type=ChatTypes.USER,
-        hidden=True,
-        message=user_prompt_generated_by_system,
+    # Call the Node.js server to create a room
+    Socket.create_room_for_content(
+        content_data.id, 
+        content_data.user_id,
     )
 
-    db.session.add_all([system_chat_instruction, user_chat_initiation])
-    db.session.commit()
+    return response(
+        success=True,
+        message=constants.SuccessMessage.content_generated,
+        content=content_data.model_response,
+        contentId=content_data.id,
+    )
 
 
 @internal_error_handler
@@ -280,6 +260,7 @@ def content_history(user, page=1, per_page=10):
             "total_items": contents_data.total,
         },
     )
+
 
 @internal_error_handler
 def content_chat_history(user, content_id):
