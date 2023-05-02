@@ -1,9 +1,14 @@
 import json
 import bcrypt
+from google.oauth2 import id_token
+from google.auth.transport import requests as g_requests
 from datetime import datetime as dt, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 from http import HTTPStatus
 
+from sqlalchemy import or_
+
+from api.utils import logging_wrapper
 from api.utils.otp import verify_otp
 from api.utils.otp import generate_otp
 from api.utils.db import add_flush_, commit_
@@ -19,7 +24,10 @@ from api.models.subscriptions import Subscription
 from api.models.subscription_type import SubscriptionType
 
 from api.assets import constants
+from config import Config
 
+
+logger = logging_wrapper.Logger(__name__)
 
 def create_session(user_id, login_method, device_details=None, ip_address=None):
     if device_details is not None and ip_address is not None:
@@ -58,6 +66,117 @@ def create_free_use_subscription(user):
     add_flush_(subs)
 
     return subs
+
+def create_user_session(
+    login_method=None, device_details=None, ip_address=None, **kwargs
+):
+    kwargs.setdefault(constants.UserCons.status, constants.UserCons.enum_status_active)
+    user = create_user(**kwargs)
+    session = create_session(
+        user_id=user.id,
+        login_method=login_method,
+        device_details=device_details,
+        ip_address=ip_address,
+    )
+    commit_()  # TODO - @shivam - keep commits in main controller functions so that we know.
+    return user, session
+
+
+@internal_error_handler
+def oauth_google(token_id, device_details=None, ip_address=None):
+    if (
+        token_id is None
+        or not isinstance(token_id, str)
+        or token_id.strip() == ""
+    ):
+        return response(
+            success=False,
+            message="token_id(str) is mandatory",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+    try:
+        user_data = id_token.verify_oauth2_token(
+            token_id,
+            g_requests.Request(),
+            Config.GOOGLE_OAUTH_CLIENT_ID,
+        )
+        assert "sub" in user_data
+    except Exception as e:
+        logger.exception(str(e))
+        return response(
+            success=False,
+            message="Something went wrong while authenticating (test) with Google. Please try again.",
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+        )
+
+    email, name, picture_url = (
+        user_data.get("email", None),
+        user_data.get("name", None),
+        user_data.get("picture", None),
+    )
+    oauth_id_google = user_data.get("sub", None)
+
+    if name is not None:
+        name = name.strip()
+
+    # Check if user is already present
+    if email is not None and isinstance(email, str) and "@" in email:
+        email = email.strip().lower()
+        user = User.query.filter(
+            or_(User.email == email, User.oauth_id_google == oauth_id_google)
+        ).first()
+    else:
+        email = None
+        user = User.query.filter(User.oauth_id_google == oauth_id_google).first()
+
+    if user is not None:
+        new_user = False
+        if user.status == constants.UserCons.enum_status_deleted:
+            return response(
+                success=False,
+                message="Your account has been deleted. Please contact support.",
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+        if name is not None and user.name is None:
+            user.name = name
+        if email is not None:
+            user.email = email
+        if picture_url is not None:
+            user.profile_photo_url = picture_url
+        user.oauth_id_google = oauth_id_google
+        user.status = constants.UserCons.enum_status_active
+        session = create_session(
+            user_id=user.id,
+            login_method=constants.SessionCons.enum_login_method_google,
+            device_details=device_details,
+            ip_address=ip_address,
+        )
+    # Create new user
+    else:
+        new_user = True
+        user, session = create_user_session(
+            name=name,
+            email=email,
+            oauth_id_google=oauth_id_google,
+            status=constants.UserCons.enum_status_active,
+            profile_photo_url=picture_url,
+            login_method=constants.SessionCons.enum_login_method_google,
+            device_details=device_details,
+            ip_address=ip_address,
+        )
+
+    # If the email or phone is found in users_invited table with active status,
+    # we should add them to the corresponding classes.
+    db.session.commit()
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.logged_in,
+        user=user.to_dict(),
+        session_id=session.session_id,
+        new_user=new_user,
+    )
 
 
 @internal_error_handler

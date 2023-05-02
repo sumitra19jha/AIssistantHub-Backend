@@ -165,3 +165,5 @@ class SuccessMessage:
     logged_out = "User logged out successfully"
     content_generated = "Successfully, Generated the content."
     content_history = "Successfully, Fetched the content history."
+    keywords="Successfully fetched keywords"
+    seo_analysis="Successfully fetched seo analysis"

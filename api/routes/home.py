@@ -1,9 +1,12 @@
 from flask import Blueprint, request, jsonify
 
 from config import Config
+from api.assets import constants
+from api.utils.request import bad_response, response
 from api.controllers import home as home_controller
 
 bp = Blueprint("home", __name__, url_prefix="/home")
+
 
 @bp.route('/generate_ideas', methods=['POST'])
 def generate_ideas():
@@ -69,7 +72,8 @@ def get_trending_keywords():
     data = request.get_json()
     query = data['query']
     trending_topics = home_controller.get_trending_topics(query)
-    keyword_suggestions = home_controller.get_keyword_suggestions(query, Config.YOUR_SEMRUSH_API_KEY)
+    keyword_suggestions = home_controller.get_keyword_suggestions(
+        query, Config.YOUR_SEMRUSH_API_KEY)
     return jsonify({"trending_topics": trending_topics, "keyword_suggestions": keyword_suggestions})
 
 
@@ -105,6 +109,7 @@ def seo_optimization():
                 type: string
     """
     return home_controller.seo_optimization(request.get_json()['content'])
+
 
 @bp.route('/generate_content_ideas', methods=['POST'])
 def generate_content_ideas():
@@ -196,6 +201,7 @@ def generate_content_brief():
     num_sections = data.get('num_sections', 5)
     return home_controller.generate_content_brief(keywords, target_audience, competitors, num_sections)
 
+
 @bp.route('/generate_social_media_posts', methods=['POST'])
 def generate_social_media_posts():
     """
@@ -249,6 +255,7 @@ def generate_social_media_posts():
     posts = home_controller.generate_social_media_posts(topic, num_posts)
     return jsonify({"posts": posts})
 
+
 @bp.route('/repurpose_content', methods=['POST'])
 def repurpose_content():
     """
@@ -290,7 +297,8 @@ def repurpose_content():
     data = request.get_json()
     content = data['content']
     target_format = data['target_format']
-    repurposed_content = home_controller.repurpose_content(content, target_format)
+    repurposed_content = home_controller.repurpose_content(
+        content, target_format)
     return jsonify({"repurposed_content": repurposed_content})
 
 
@@ -316,8 +324,9 @@ def trends_keywords():
               description: The repurposed content
               example: "In this video, we'll explore the importance of digital marketing for businesses..."
     """
-    return {
-        "keywords":["Today my blog is on Generative AI", "Lets brainstorm this week content"]
-    }
-
-
+    return response(
+        success=True,
+        message=constants.SuccessMessage.keywords,
+        keywords=["Today my blog is on Generative AI",
+                  "Lets brainstorm this week content"]
+    )

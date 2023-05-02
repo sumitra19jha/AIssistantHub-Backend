@@ -8,6 +8,39 @@ from api.middleware.auth import (authenticate)
 bp = Blueprint("user", __name__, url_prefix="/user")
 
 
+@bp.route("/oauth/google", methods=["POST"])
+def oauth_google():
+    """This is used as oauth google signup api. This api validates the token_id sent from the frontend and if successful, session will be created and the user will be logged in.
+    ---
+    tags:
+        - User
+    parameters:
+      - name: body
+        in: body
+        schema:
+          type: object
+          required:
+            - role
+            - token_id
+          properties:
+            token_id:
+              type: string
+            role:
+              type: string
+              enum: [teacher, student]
+            floating_user_id:
+              type: integer
+
+    responses:
+      200:
+        description: In response, user object, session_id are sent other than success and message. Frontend should login after successful response.
+    """
+    return user_controller.oauth_google(
+        token_id=request.json.get("token_id", None),
+        device_details=request.json.get("device_details", None),
+        ip_address= request.remote_addr,
+    )
+
 @bp.route('/register', methods=['POST'])
 def register():
     """

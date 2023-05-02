@@ -22,7 +22,81 @@ from api.utils.time import TimeUtils
 
 from api.utils.request import bad_response, response
 from api.middleware.error_handlers import internal_error_handler
+from api.utils.seo_utils import AssistantHubSEO
 
+
+@internal_error_handler
+def seo_optimisation_generator(user, business_type, target_audience, industry, goals, user_ip):
+    validation_response = APIInputValidator.validate_input_for_seo(
+        business_type, 
+        target_audience, 
+        industry,
+        goals,
+    )
+    
+    if validation_response:
+        return validation_response
+
+    query = f"{business_type} {target_audience} {industry} {goals}"
+    num_pages=10
+
+    #1. Search Engine Analysis
+    search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
+
+    # Analyse the google search results and get the keywords
+    search_analysis = AssistantHubSEO.analyze_google_search_results(search_results)
+
+    #2. Youtube Search
+    youtube_data = AssistantHubSEO.youtube_search(query)
+
+    #3. News Search
+    news_data = AssistantHubSEO.fetch_google_news(query)
+
+    #4. Places search
+    places_data = AssistantHubSEO.fetch_google_places(query)
+    
+    #Competition Analysis
+    competitor_urls = AssistantHubSEO.fetch_competitors(query)
+    comptitor_analysis = []
+    competition_text_data = []
+
+    for url in competitor_urls:
+        html = AssistantHubSEO.fetch_html(url)
+        if html:
+            analysis = AssistantHubSEO.analyze_competion_page(html)
+            comptitor_analysis.append(analysis)
+            competition_text_data.append(analysis["title"] + " " + analysis["meta_description"])
+
+    #Online Social Forum Analysis
+    #TODO: Change this to a subreddit of the user's choice
+    subreddit_name = "photography"
+
+    analysis = AssistantHubSEO.analyze_reddit_subreddit(subreddit_name)
+    subreddit_text_data = [post["title"] + " " + post["body"] for post in analysis["posts"]]
+
+    search_text_data = [item["title"] + " " + item["snippet"] for item in search_results.get("items", [])]
+    youtube_text_data = [video["title"] for video in youtube_data] if youtube_data else []
+    news_text_data = [item["title"] + " " + item["snippet"] for item in news_data.get("items", [])] if news_data else []
+
+    # NLP Analysis
+    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(search_text_data + news_text_data + youtube_text_data + competition_text_data + subreddit_text_data, num_topics=5)
+    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(search_text_data + news_text_data + youtube_text_data + competition_text_data + subreddit_text_data, max_keywords=50)
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.seo_analysis,
+        search_results=search_results,
+        search_results_analysis=search_analysis,
+        news_data=news_data,
+        youtube_data=youtube_data,
+        places_data=places_data,
+        competitor_data= competitor_urls,
+        comptitor_analysis= comptitor_analysis,
+        online_forums= analysis,
+        semantic_topics= semantic_keywords_and_topics["topics"],
+        long_tail_keywords= long_tail_keywords,
+        lsi_keywords= semantic_keywords_and_topics["keywords"],
+    )
 
 @internal_error_handler
 def generate_content_for_social_media(user, topic, platform, keywords, length, urls, user_ip):
