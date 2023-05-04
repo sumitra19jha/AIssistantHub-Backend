@@ -63,9 +63,9 @@ class AssistantHubSEO:
         # Extract the titles, snippets, and URLs from the search results
         text_data = []
         for item in search_results.get("items", []):
-            text_data.append(item["title"])
-            text_data.append(item["snippet"])
-            text_data.append(item["link"])
+            text_data.append(item.get("title", ""))
+            text_data.append(item.get("snippet", ""))
+            text_data.append(item.get("link", ""))
 
         # Tokenize the text data
         tokens = nltk.word_tokenize(" ".join(text_data).lower())
@@ -104,13 +104,18 @@ class AssistantHubSEO:
                         id=video_id
                     ).execute()["items"][0]
 
+                    video_url = f"https://www.youtube.com/watch?v={video_id}"
+                    thumbnail_url = search_result["snippet"]["thumbnails"]["default"]["url"]
+
                     videos.append(
                         {
                             "title": search_result["snippet"]["title"],
                             "description": video_info["snippet"]["description"],
                             "video_id": video_id,
+                            "video_url": video_url,
                             "channel_title": search_result["snippet"]["channelTitle"],
-                            "publish_date": video_info["snippet"]["publishedAt"]
+                            "publish_date": video_info["snippet"]["publishedAt"],
+                            "thumbnail_url": thumbnail_url
                         }
                     )
             return videos
@@ -143,7 +148,24 @@ class AssistantHubSEO:
     def fetch_google_places(query):
         google_places = GooglePlaces(Config.GOOGLE_SEARCH_API_KEY_FOR_PLACES)
         query_result = google_places.text_search(query=query)
-        return query_result.places
+        
+        places_data = []
+        for place in query_result.places:
+            place.get_details()
+            place_dict = {
+                "name": place.name,
+                "address": place.formatted_address,
+                "google_maps_url": f"https://maps.google.com/?q={place.geo_location['lat']},{place.geo_location['lng']}",
+                "latitude": place.geo_location["lat"],
+                "longitude": place.geo_location["lng"]
+            }
+            if hasattr(place, 'website'):
+                place_dict["website"] = place.website
+            if hasattr(place, 'rating'):
+                place_dict["rating"] = place.rating
+            places_data.append(place_dict)
+
+        return places_data
 
     def fetch_competitors(query):
         url = "https://www.googleapis.com/customsearch/v1"
@@ -272,7 +294,7 @@ class AssistantHubSEO:
             "keywords": keywords,
         }
 
-    def get_long_tail_keywords(texts, max_keywords=50):
+    def get_long_tail_keywords(texts, max_keywords=50, n_components=100):
         # Tokenize and preprocess the text data
         texts = [nltk.word_tokenize(text.lower()) for text in texts]
         texts = [[token for token in text if token.isalpha()] for text in texts]
@@ -282,7 +304,7 @@ class AssistantHubSEO:
         tfidf_matrix = tfidf_vectorizer.fit_transform([" ".join(text) for text in texts])
 
         # Reduce the dimensionality of the matrix using truncated SVD
-        svd = TruncatedSVD(n_components=100, random_state=42)
+        svd = TruncatedSVD(n_components=n_components, random_state=42)
         tfidf_matrix_svd = svd.fit_transform(tfidf_matrix)
 
         # Calculate the cosine similarities between all pairs of documents
@@ -298,3 +320,15 @@ class AssistantHubSEO:
         all_keywords = [keyword for keywords in top_keywords for keyword in keywords]
         keyword_freq = Counter(all_keywords)
         return keyword_freq.most_common(max_keywords)
+
+    def fetch_html(url):
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return response.text
+            else:
+                print(f"Error: {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error fetching URL: {e}")
+            return None

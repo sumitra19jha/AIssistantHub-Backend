@@ -22,6 +22,17 @@ class AssistantHubScrapper:
             print(f"Error fetching country code: {e}")
             return None
 
+    def get_country_name_from_ip(ip_address):
+        try:
+            response = requests.get(f"http://ip-api.com/json/{ip_address}")
+            response.raise_for_status()
+            data = response.json()
+            if data['status'] == 'success':
+                return data['country'].lower()
+        except Exception as e:
+            print(f"Error fetching country name: {e}")
+            return None
+
     def fetch_url_content(url):
         try:
             response = requests.get(url, timeout=10)

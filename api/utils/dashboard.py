@@ -1,4 +1,5 @@
 from api.assets import constants
+import re
 
 class DashboardUtils:
     def sizeOfContent(type, length):
@@ -55,3 +56,15 @@ class DashboardUtils:
     def format_string_for_chat(text):
         return ' '.join(word.capitalize(
         ) for word in text.replace('_', ' ').split(' '))
+
+    def create_array_from_text(text):
+        try:
+            array_elements = re.findall(r'\[([\s\S]*?)\]', text)
+            if len(array_elements) == 0:
+                return []
+
+            array_string = array_elements[0]
+            items = [item.strip().strip('"') for item in array_string.split(",")]
+            return items
+        except Exception as e:
+            return []
