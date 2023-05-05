@@ -137,6 +137,7 @@ class ProjectTypeCons:
     enum_news = "news"
     enum_maps = "maps"
     enum_google_search = "google_search"
+    enum_competitor = "competitor"
     enum_reddit = "reddit"
 
 

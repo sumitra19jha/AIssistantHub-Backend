@@ -3,6 +3,8 @@ from http import HTTPStatus
 
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
+from api.models.competitor_search_rel import CompetitorSearchRel
+from api.models.comptitor_analysis import CompetitorAnalysis
 from api.models.google_search_analysis import GoogleSearchAnalysis
 from api.models.google_search_search_rel import GoogleSearchSearchRel
 from api.models.maps_analysis import MapsAnalysis
@@ -453,7 +455,7 @@ def seo_analyzer_search_results(user, project_id):
                 GoogleSearchAnalysis.link == src.get("link", "")
             ).first()
         )
-        
+
         if src_model is None:
             src_model = GoogleSearchAnalysis(
                 title=src.get("title", ""),
@@ -501,21 +503,29 @@ def seo_analyzer_search_results(user, project_id):
     )
 
 @internal_error_handler
-def seo_analyzer_competitors(user, business_type, target_audience, industry, goals, user_ip):
-    validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
-        industry,
-        goals,
-    )
-    
-    if validation_response:
-        return validation_response
+def seo_analyzer_competitors(user, project_id):
+    if project_id is None:
+        return bad_response(
+            message="Project id is required",
+        )
 
-    overall_goals = ", ".join(goals)
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
     
-    query = f"{business_type} {target_audience} {industry} {overall_goals}"
+    query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
+
+    search_model = SearchQuery.query.filter(
+        SearchQuery.search_query == query,
+        SearchQuery.seo_project_id == project_id,
+        SearchQuery.type == constants.ProjectTypeCons.enum_competitor,
+    ).first()
+
+    if search_model is None:
+        search_model = SearchQuery(
+            search_query=query,
+            seo_project_id=project_id,
+            type=constants.ProjectTypeCons.enum_competitor,
+        )
+        add_commit_(search_model)
     
     #Competition Analysis
     competitor_urls = AssistantHubSEO.fetch_competitors(query)
@@ -529,8 +539,52 @@ def seo_analyzer_competitors(user, business_type, target_audience, industry, goa
         if html:
             analysis = AssistantHubSEO.analyze_competion_page(html)
             comptitor_analysis.append(analysis)
-            competitor_display.append({"title": analysis["title"], "url": url, "meta_description": "" if analysis["meta_description"] == None else analysis["meta_description"]})
-            competition_text_data.append(analysis["title"] + " " + ( "" if analysis["meta_description"] == None else analysis["meta_description"]))
+            
+            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == url).first()
+            
+            if comp_anl_model is None:
+                comp_anl_model = CompetitorAnalysis(
+                    title=analysis.get("title", ""),
+                    meta_description=analysis.get("meta_description", ""),
+                    link=url,
+                )
+                add_commit_(comp_anl_model)
+            
+            competitor_search_rel = (
+                CompetitorSearchRel.query.filter(
+                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id, 
+                    CompetitorSearchRel.search_query_id == search_model.id
+                ).first()
+            )
+            if competitor_search_rel is None:
+                competitor_search_rel = CompetitorSearchRel(
+                    comptitor_analysis_id=comp_anl_model.id, 
+                    search_query_id=search_model.id,
+                )
+                add_commit_(competitor_search_rel)
+            
+            competitor_display.append({"title": analysis.get("title", ""), "url": url, "meta_description": analysis.get("meta_description", "")})
+            competition_text_data.append((analysis.get("title") or "") + " " + (analysis.get("meta_description") or ""))
+        else:
+            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == url).first()
+            
+            if comp_anl_model is None:
+                comp_anl_model = CompetitorAnalysis(link=url)
+                add_commit_(comp_anl_model)
+            
+            competitor_search_rel = (
+                CompetitorSearchRel.query.filter(
+                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id, 
+                    CompetitorSearchRel.search_query_id == search_model.id
+                ).first()
+            )
+            
+            if competitor_search_rel is None:
+                competitor_search_rel = CompetitorSearchRel(
+                    comptitor_analysis_id=comp_anl_model.id, 
+                    search_query_id=search_model.id,
+                )
+                add_commit_(competitor_search_rel)
 
     # NLP Analysis
     semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(competition_text_data, num_topics=5)

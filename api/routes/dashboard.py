@@ -211,7 +211,7 @@ def seo_analyzer_competitors():
     This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
     ---
     tags:
-        - Dashboard
+      - Dashboard
     parameters:
       - name: Authorization
         in: header
@@ -224,45 +224,18 @@ def seo_analyzer_competitors():
         schema:
           type: object
           properties:
-            business_type:
-                type: string
-                description: Type of business
-            target_audience:
-                type: string
-                description: Audience of the business
-            industry:
-                type: string
-                description: Industry of the business
-            goals:
-                type: array
-                description: Optimisation goals
+            project_id:
+              type: integer
+              description: Type of business
         required:
-            - business_type
-            - target_audience
-            - industry
-            - goals
+          - project_id
     responses:
         200:
           description: In response, success and message are sent. Frontend should logout after successful response.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    description: Indicates if the request was successful
-                  message:
-                    type: string
-                    description: Message related to the request
     """
     return dashboard_controller.seo_analyzer_competitors(
         user=request.user,
-        business_type=request.json.get("business_type", None),
-        target_audience=request.json.get("target_audience", None),
-        industry=request.json.get("industry", None),
-        goals=request.json.get("goals", None),
-        user_ip=request.remote_addr,
+        project_id=request.json.get("project_id", None),
     )
 
 @bp.route("/seo_optimisation/online_forums", methods=["POST"])
