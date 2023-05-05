@@ -19,6 +19,7 @@ class Config:
     
     OPENAI_API_KEY = environ.get("OPENAI_API_KEY")
     OPENAI_MODEL = environ.get("OPENAI_MODEL")
+    OPENAI_MODEL_GPT4 = environ.get("OPENAI_MODEL_GPT4")
     
     SQLALCHEMY_ECHO_DB_COMMANDS = bool(
         environ.get("SQLALCHEMY_ECHO_DB_COMMANDS", False)
@@ -36,6 +37,7 @@ class Config:
     CUSTOM_SEARCH_ENGINE_ID = environ.get("CUSTOM_SEARCH_ENGINE_ID")
     GOOGLE_SEARCH_API_KEY_FOR_PLACES = environ.get("GOOGLE_SEARCH_API_KEY_FOR_PLACES")
     GOOGLE_OAUTH_CLIENT_ID = environ.get("GOOGLE_OAUTH_CLIENT_ID")
+    GOOGLE_YOUTUBE_1_API_KEY = environ.get("GOOGLE_YOUTUBE_1_API_KEY")
 
     RTC_AUTH_KEY=environ.get("RTC_AUTH_KEY")
     RTC_URL=environ.get("RTC_URL")

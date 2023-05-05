@@ -1,79 +1,165 @@
 from bs4 import BeautifulSoup
 from http import HTTPStatus
+
+from api.middleware.error_handlers import internal_error_handler
+
+from api.assets import constants
+
 from api.utils.classifier_models import ClassifierModels
 from api.utils.content_db import ContentDataModel
 from api.utils.dashboard import DashboardUtils
+from api.utils.db import add_commit_, add_flush_, commit_
 from api.utils.generator_models import GeneratorModels
 from api.utils.instructor import Instructor
 from api.utils.prompt import PromptGenerator
-
-from config import Config
 from api.utils.socket import Socket
-
-
-from api.assets import constants
 from api.utils.validator import APIInputValidator
 from api.utils.input_preprocessor import InputPreprocessor
+from api.utils.scrapper import AssistantHubScrapper
+from api.utils.time import TimeUtils
+from api.utils.request import bad_response, response
+from api.utils.seo_utils import AssistantHubSEO
+from api.utils import logging_wrapper
+
+from api.models import db
 from api.models.content import Content
 from api.models.chat import Chat
-from api.models import db
-from api.utils.scrapper import AssistantHubScrapper
+from api.models.youtube_seo_analysis import YouTubeSEOAnalysis
 
-from api.utils.time import TimeUtils
-
-from api.utils.request import bad_response, response
-from api.middleware.error_handlers import internal_error_handler
-from api.utils.seo_utils import AssistantHubSEO
-
+logger = logging_wrapper.Logger(__name__)
 
 @internal_error_handler
 def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, user_ip):
+    # Validate input
     validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
+        business_type,
+        target_audience,
         industry,
         goals,
     )
-    
+
     if validation_response:
         return validation_response
 
-    overall_goals = ", ".join(goals)
     country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
 
-    youtube_search_query = GeneratorModels.generate_youtube_search_text(
-        user=user,
-        bussiness_type=business_type,
+    youtube_seo_data_model = YouTubeSEOAnalysis(
+        user_id=user.id,
+        business_type=business_type,
         target_audience=target_audience,
         industry=industry,
-        goals=overall_goals,
-        location=country_name
+        goals=goals,
+        country=country_name,
+        user_ip=user_ip,
     )
+    add_commit_(youtube_seo_data_model)
 
-    youtube_array_of_search = DashboardUtils.create_array_from_text(youtube_search_query)
-    
-    if len(youtube_array_of_search) == 0:
-        youtube_query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    else:
-        youtube_query = youtube_array_of_search[0]
-        print(youtube_query)
+    # Generate YouTube search queries using GPT-4
+    try:
+        youtube_search_query_arr = GeneratorModels.generate_youtube_search_text_gpt4(
+            user=user,
+            business_type=business_type,
+            target_audience=target_audience,
+            industry=industry,
+            location=country_name
+        )
+    except Exception as e:
+        logger.exception(str(e))
+        return response(
+            success=False,
+            message=f"Error generating search query: {str(e)}"
+        )
 
-    youtube_data = AssistantHubSEO.youtube_search(youtube_query)
-    youtube_text_data = [video.get("title", "") for video in youtube_data] if youtube_data else []
+    # Preprocess search queries
+    youtube_array_of_search = DashboardUtils.preprocess_youtube_search_array(youtube_search_query_arr)
 
-    # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(youtube_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(youtube_text_data, max_keywords=50, n_components=20)
+    # Remove short search queries
+    youtube_array_of_search = [query for query in youtube_array_of_search if len(query) >= 5]
+
+    if not youtube_array_of_search:
+        return response(
+            success=False,
+            message="Unable to generate the search query.",
+        )
+
+    # Fetch YouTube video data
+    try:
+        youtube_data = AssistantHubSEO.youtube_search(youtube_array_of_search, youtube_seo_data_model.id)
+    except Exception as e:
+        return response(
+            success=False,
+            message=f"Error fetching YouTube data: {str(e)}"
+        )
+
+    # Extract keywords and phrases from video data
+    title_documents, description_documents = AssistantHubSEO.yotube_video_keywords_extraction(youtube_data)
+
+    # Compute the TF-IDF matrix for title and description
+    title_tfidf_model, title_corpus, title_dictionary = AssistantHubSEO.compute_tfidf_matrix(title_documents)
+    description_tfidf_model, description_corpus, description_dictionary = AssistantHubSEO.compute_tfidf_matrix(description_documents)
+
+    # Identify top keywords for title and description
+    top_title_keywords = AssistantHubSEO.identify_top_keywords(title_tfidf_model, title_corpus, title_dictionary)
+    top_description_keywords = AssistantHubSEO.identify_top_keywords(description_tfidf_model, description_corpus, description_dictionary)
+
+    # Calculate the keyword scores for title and description
+    title_keyword_scores = AssistantHubSEO.calculate_keyword_score(top_title_keywords, youtube_data)
+    description_keyword_scores = AssistantHubSEO.calculate_keyword_score(top_description_keywords, youtube_data)
+
+    # Rank the keywords based on their scores
+    ranked_title_keywords = AssistantHubSEO.rank_keywords(title_keyword_scores)
+    ranked_description_keywords = AssistantHubSEO.rank_keywords(description_keyword_scores)
+
+    # Filter the keywords based on their scores
+    filtered_title_keywords = AssistantHubSEO.filter_keywords(ranked_title_keywords)
+    filtered_description_keywords = AssistantHubSEO.filter_keywords(ranked_description_keywords)
+
+    # Combine the top keywords from titles and descriptions and remove duplicates
+    combined_keywords = list(set(filtered_title_keywords + filtered_description_keywords))
+
+    # Generate title templates using GPT-3.5 Turbo
+    try:
+        title_templates = GeneratorModels.generate_title_templates_gpt4(
+            user=user,
+            business_type=business_type,
+            target_audience=target_audience,
+            industry=industry,
+            location=country_name,
+            num_templates=5  # You can adjust the number of templates generated
+        )
+    except Exception as e:
+        return response(
+            success=False,
+            message=f"Error generating title templates: {str(e)}"
+        )
+
+    # Preprocess search queries
+    filtered_templates = DashboardUtils.preprocess_youtube_search_array(title_templates)
+
+    # Fill in the title templates with the top keywords to create content title variations
+    content_titles = []
+    for template in filtered_templates:
+        for keyword in combined_keywords:
+            content_title = template.lower().replace("{keyword}", keyword)
+            content_titles.append(content_title)
+
+    youtube_seo_data_model.suggestions = {
+        "title_templates": title_templates,
+        "content_titles": content_titles,
+        "filtered_title_keywords": filtered_title_keywords,
+        "filtered_description_keywords": filtered_description_keywords,
+    }
+
+    commit_()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data=youtube_data,
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
+        data=[data.to_dict() for data in youtube_data],
+        title_keyword_scores=filtered_title_keywords,
+        description_keyword_scores=filtered_description_keywords,
+        content_titles=content_titles,
     )
-
 
 @internal_error_handler
 def seo_analyzer_news(user, business_type, target_audience, industry, goals, user_ip):
