@@ -16,7 +16,9 @@ from urllib.parse import urlparse
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from collections import Counter
-
+from api.models.search_query import SearchQuery
+from api.assets import constants
+from api.utils.db import add_commit_
 from config import Config
 
 import nltk
@@ -38,6 +40,7 @@ class AssistantHubSEO:
     #   "{business_type} {target_audience} {industry} {goals}"
     def fetch_google_search_results(query, num_pages=1):
         results = []
+
         for i in range(num_pages):
             start = i * 10 + 1
             url = "https://www.googleapis.com/customsearch/v1"
@@ -45,7 +48,9 @@ class AssistantHubSEO:
                 "key": Config.GOOGLE_SEARCH_API_KEY,
                 "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
                 "q": query,
-                "start": start
+                "start": start,
+                'sort': 'date',  # Sort results by recency
+                'lr': 'lang_en',  # Fetch articles in English
             }
 
             response = requests.get(url, params=params)

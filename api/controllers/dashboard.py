@@ -3,6 +3,8 @@ from http import HTTPStatus
 
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
+from api.models.google_search_analysis import GoogleSearchAnalysis
+from api.models.google_search_search_rel import GoogleSearchSearchRel
 from api.models.maps_analysis import MapsAnalysis
 from api.models.maps_search_rel import MapsSearchRel
 from api.models.search_query import SearchQuery
@@ -417,29 +419,71 @@ def seo_analyzer_places(user, project_id):
     )
 
 @internal_error_handler
-def seo_analyzer_search_results(user, business_type, target_audience, industry, goals, user_ip):
-    validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
-        industry,
-        goals,
-    )
-    
-    if validation_response:
-        return validation_response
+def seo_analyzer_search_results(user, project_id):
+    if project_id is None:
+        return bad_response(
+            message="Project id is required",
+        )
 
-    overall_goals = ", ".join(goals)
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
-    
-    query = f"{business_type} {target_audience} {industry} {overall_goals}"
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
+    query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
     num_pages=1
+
+    search_model = SearchQuery.query.filter(
+        SearchQuery.search_query == query,
+        SearchQuery.seo_project_id == project_id,
+        SearchQuery.type == constants.ProjectTypeCons.enum_google_search,
+    ).first()
+
+    if search_model is None:
+        search_model = SearchQuery(
+            search_query=query,
+            seo_project_id=project_id,
+            type=constants.ProjectTypeCons.enum_google_search,
+        )
+        add_commit_(search_model)
 
     #1. Search Engine Analysis
     search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
+    search_result_items = search_results.get("items", [])
+    
+    for src in search_result_items:
+        src_model = (
+            GoogleSearchAnalysis.query.filter(
+                GoogleSearchAnalysis.link == src.get("link", "")
+            ).first()
+        )
+        
+        if src_model is None:
+            src_model = GoogleSearchAnalysis(
+                title=src.get("title", ""),
+                snippet=src.get("snippet", ""),
+                link=src.get("link", ""),
+                display_link=src.get("displayLink", ""),
+                html_snippet=src.get("htmlSnippet", ""),
+                html_title=src.get("htmlTitle", ""),
+                pagemap=src.get("pagemap", ""),
+                kind=src.get("kind", ""),
+                html_formatted_url=src.get("htmlFormattedUrl", ""),
+                formatted_url=src.get("formattedUrl", ""),
+            )
+            add_commit_(src_model)
+        
+        google_search_rel = (
+            GoogleSearchSearchRel.query.filter(
+                GoogleSearchSearchRel.google_search_analysis_id == src_model.id, 
+                GoogleSearchSearchRel.search_query_id == search_model.id
+            ).first()
+        )
+        if google_search_rel is None:
+            google_search_rel = GoogleSearchSearchRel(
+                google_search_analysis_id=src_model.id, 
+                search_query_id=search_model.id,
+            )
+            add_commit_(google_search_rel)
 
     # Analyse the google search results and get the keywords
     search_analysis = AssistantHubSEO.analyze_google_search_results(search_results)
-
     search_text_data = [item.get("title", "") + " " + item.get("snippet", "") for item in search_results.get("items", [])]
 
     # NLP Analysis
