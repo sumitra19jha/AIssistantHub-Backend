@@ -391,31 +391,6 @@ class AssistantHubSEO:
 
         return videos
 
-    # Uses Google Places API for search based on user Input
-    # The current form of Query for Search is:
-    #   "{business_type} {target_audience} {industry} {goals}"
-    def fetch_google_places(query):
-        google_places = GooglePlaces(Config.GOOGLE_SEARCH_API_KEY_FOR_PLACES)
-        query_result = google_places.text_search(query=query)
-
-        places_data = []
-        for place in query_result.places:
-            place.get_details()
-            place_dict = {
-                "name": place.name,
-                "address": place.formatted_address,
-                "google_maps_url": f"https://maps.google.com/?q={place.geo_location['lat']},{place.geo_location['lng']}",
-                "latitude": place.geo_location["lat"],
-                "longitude": place.geo_location["lng"]
-            }
-            if hasattr(place, 'website'):
-                place_dict["website"] = place.website
-            if hasattr(place, 'rating'):
-                place_dict["rating"] = place.rating
-            places_data.append(place_dict)
-
-        return places_data
-
     def fetch_competitors(query):
         url = "https://www.googleapis.com/customsearch/v1"
         params = {

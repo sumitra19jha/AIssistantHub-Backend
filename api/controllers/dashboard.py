@@ -11,6 +11,7 @@ from api.utils.dashboard import DashboardUtils
 from api.utils.db import add_commit_, add_flush_, commit_
 from api.utils.generator_models import GeneratorModels
 from api.utils.instructor import Instructor
+from api.utils.maps_utils import AssistantHubMapsAlgo
 from api.utils.news_utlis import AssistantHubNewsAlgo
 from api.utils.prompt import PromptGenerator
 from api.utils.socket import Socket
@@ -229,16 +230,93 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
     if validation_response:
         return validation_response
 
-    overall_goals = ", ".join(goals)
-    query = f"{business_type} {target_audience} {industry} {overall_goals}"
+    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
+    
+    # Generate News search queries using GPT-4
+    try:
+        maps_search_query = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
+            user=user,
+            business_type=business_type,
+            target_audience=target_audience,
+            industry=industry,
+            location=country_name
+        )
+    except Exception as e:
+        logger.exception(str(e))
+        return response(
+            success=False,
+            message=f"Error generating search query: {str(e)}"
+        )
+    
+    if not maps_search_query:
+        return response(
+            success=False,
+            message="Unable to generate the search query.",
+        )
 
     #4. Places search
-    places_data = AssistantHubSEO.fetch_google_places(query)
+    places_data = AssistantHubMapsAlgo.fetch_google_places(maps_search_query[0])
+    list_of_keywords= []
+    response_places_data = []
+
+    for place in places_data:
+        website = place["website"]
+        
+        new_snippet = f"Visit us at {place['name']} located at {place['address']} for the best experience."
+        place["optimized_snippets"] = [new_snippet]
+
+        if website:
+            website_data = AssistantHubMapsAlgo.fetch_website_data(website)
+
+            if website_data is not None:
+                title, snippets, urls = website_data
+                all_text = " ".join([title])
+
+                # Pass the place object to the process_text function
+                keywords = AssistantHubMapsAlgo.process_text(all_text, place)
+                list_of_keywords.extend(keywords)
+
+                place["title"] = title
+                place["snippets"] = snippets
+                place["urls"] = urls
+                place["keywords"] = keywords
+                place["optimized_snippets"] = place["snippets"] + [new_snippet]
+
+                response_places_data.append({
+                    "address": place["address"],
+                    "google_maps_url": place["google_maps_url"],
+                    "name": place["name"],
+                    "snippets": place["optimized_snippets"],
+                    "website": place["website"],
+                    "backlinks": len(urls),
+                })
+            else:
+                response_places_data.append({
+                    "address": place["address"],
+                    "google_maps_url": place["google_maps_url"],
+                    "name": place["name"],
+                    "snippets": place["optimized_snippets"],
+                    "website": None,
+                    "backlinks": None,
+                })
+        else:
+            response_places_data.append({
+                "address": place["address"],
+                "google_maps_url": place["google_maps_url"],
+                "name": place["name"],
+                "snippets": place["optimized_snippets"],
+                "website": None,
+                "backlinks": None,
+            })
+
+    geo_distribution = AssistantHubMapsAlgo.analyze_georaphic_distribution(places_data)
     
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data=places_data,
+        data=response_places_data,
+        keywords=list_of_keywords,
+        geo_distribution=geo_distribution,
     )
 
 @internal_error_handler
