@@ -132,6 +132,14 @@ class ErrorMessage:
     add_liveclass_audience_to_class = "Failed to add users to class"
 
 
+class ProjectTypeCons:
+    enum_youtube = "youtube"
+    enum_news = "news"
+    enum_maps = "maps"
+    enum_google_search = "google_search"
+    enum_reddit = "reddit"
+
+
 class UserCons:
     status = "status"
 

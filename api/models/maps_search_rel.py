@@ -1,41 +1,33 @@
 import copy
-
 from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
 from api.models import db
-from api.models.user import User
+from api.models.maps_analysis import MapsAnalysis
+from api.models.search_query import SearchQuery
 
 
 @dataclass
-class YouTubeSEOAnalysis(db.Model):
-    __tablename__ = "youtube_seo_analysis"
-    
+class MapsSearchRel(db.Model):
+    __tablename__ = "maps_search_rel"
+
     id: int
-    user_id: int
-    business_type: str
-    target_audience: str
-    industry: str
-    goals: str
-    country: str
-    user_ip: str
-    suggestions: object
+    search_query_id: int
+    maps_analysis_id: int
+    
     created_at: dt
     updated_at: dt
-    
+
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
-    business_type = db.Column(db.String(100), nullable=False)
-    target_audience = db.Column(db.String(100), nullable=False)
-    industry = db.Column(db.String(100), nullable=False)
-    goals = db.Column(db.String(500), nullable=True)
-    country = db.Column(db.String(100), nullable=True)
-    user_ip = db.Column(db.String(50), nullable=True)
-    suggestions = db.Column(db.JSON, nullable=True)
-    
+    search_query_id = db.Column(db.Integer, db.ForeignKey(SearchQuery.id), nullable=False)
+    maps_analysis_id = db.Column(db.Integer, db.ForeignKey(MapsAnalysis.id), nullable=False)
+
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=dt.utcnow, default=dt.utcnow, nullable=False)
+
+    search_query = db.relationship(SearchQuery, backref="maps_search_rel", lazy=True)
+    maps_analysis = db.relationship(MapsAnalysis, backref="maps_search_rel", lazy=True)
 
     def to_dict(self):
         assert self.id is not None

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
 from api.controllers import dashboard as dashboard_controller
 from api.utils.request import get_parsed_data_list
@@ -7,9 +7,9 @@ from api.middleware.auth import (authenticate)
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
 
-@bp.route("/seo_optimisation/youtube", methods=["POST"])
+@bp.route("/seo_optimisation/create", methods=["POST"])
 @authenticate
-def seo_analyzer_youtube():
+def seo_analyzer_create_project():
     """Generate SEO Optimisation strategy
     This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
     ---
@@ -59,13 +59,47 @@ def seo_analyzer_youtube():
                     type: string
                     description: Message related to the request
     """
-    return dashboard_controller.seo_analyzer_youtube(
+    return dashboard_controller.seo_analyzer_create_project(
         user=request.user,
         business_type=request.json.get("business_type", None),
         target_audience=request.json.get("target_audience", None),
         industry=request.json.get("industry", None),
         goals=request.json.get("goals", None),
         user_ip=request.remote_addr,
+    )
+
+@bp.route("/seo_optimisation/youtube", methods=["POST"])
+@authenticate
+def seo_analyzer_youtube():
+    """Generate SEO Optimisation strategy
+    This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
+    ---
+    tags:
+      - Dashboard
+    parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            project_id:
+              type: integer
+              description: Type of business
+        required:
+          - project_id
+    responses:
+        200:
+          description: In response, success and message are sent. Frontend should logout after successful response.
+    """
+    return dashboard_controller.seo_analyzer_youtube(
+        user=request.user,
+        project_id=request.json.get("project_id", None),
     )
 
 @bp.route("/seo_optimisation/news", methods=["POST"])
@@ -75,7 +109,7 @@ def seo_analyzer_news():
     This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
     ---
     tags:
-        - Dashboard
+      - Dashboard
     parameters:
       - name: Authorization
         in: header
@@ -88,45 +122,18 @@ def seo_analyzer_news():
         schema:
           type: object
           properties:
-            business_type:
-                type: string
-                description: Type of business
-            target_audience:
-                type: string
-                description: Audience of the business
-            industry:
-                type: string
-                description: Industry of the business
-            goals:
-                type: array
-                description: Optimisation goals
+            project_id:
+              type: integer
+              description: Type of business
         required:
-            - business_type
-            - target_audience
-            - industry
-            - goals
+          - project_id
     responses:
         200:
           description: In response, success and message are sent. Frontend should logout after successful response.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    description: Indicates if the request was successful
-                  message:
-                    type: string
-                    description: Message related to the request
     """
     return dashboard_controller.seo_analyzer_news(
         user=request.user,
-        business_type=request.json.get("business_type", None),
-        target_audience=request.json.get("target_audience", None),
-        industry=request.json.get("industry", None),
-        goals=request.json.get("goals", None),
-        user_ip=request.remote_addr,
+        project_id=request.json.get("project_id", None),
     )
 
 @bp.route("/seo_optimisation/places", methods=["POST"])
@@ -136,7 +143,7 @@ def seo_analyzer_places():
     This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
     ---
     tags:
-        - Dashboard
+      - Dashboard
     parameters:
       - name: Authorization
         in: header
@@ -149,45 +156,18 @@ def seo_analyzer_places():
         schema:
           type: object
           properties:
-            business_type:
-                type: string
-                description: Type of business
-            target_audience:
-                type: string
-                description: Audience of the business
-            industry:
-                type: string
-                description: Industry of the business
-            goals:
-                type: array
-                description: Optimisation goals
+            project_id:
+              type: integer
+              description: Type of business
         required:
-            - business_type
-            - target_audience
-            - industry
-            - goals
+          - project_id
     responses:
         200:
           description: In response, success and message are sent. Frontend should logout after successful response.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    description: Indicates if the request was successful
-                  message:
-                    type: string
-                    description: Message related to the request
     """
     return dashboard_controller.seo_analyzer_places(
         user=request.user,
-        business_type=request.json.get("business_type", None),
-        target_audience=request.json.get("target_audience", None),
-        industry=request.json.get("industry", None),
-        goals=request.json.get("goals", None),
-        user_ip=request.remote_addr,
+        project_id=request.json.get("project_id", None),
     )
 
 @bp.route("/seo_optimisation/search_results", methods=["POST"])
@@ -372,70 +352,6 @@ def seo_analyzer_online_forums():
         goals=request.json.get("goals", None),
         user_ip=request.remote_addr,
     )
-
-
-@bp.route("/seo_optimisation/generator", methods=["POST"])
-@authenticate
-def seo_analyzer():
-    """Generate SEO Optimisation strategy
-    This API endpoint generates content based on the given parameters, such as type, topic, keywords, and length.
-    ---
-    tags:
-        - Dashboard
-    parameters:
-      - name: Authorization
-        in: header
-        schema:
-          type: string
-          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
-        required: true
-      - in: body
-        name: body
-        schema:
-          type: object
-          properties:
-            business_type:
-                type: string
-                description: Type of business
-            target_audience:
-                type: string
-                description: Audience of the business
-            industry:
-                type: string
-                description: Industry of the business
-            goals:
-                type: array
-                description: Optimisation goals
-        required:
-            - business_type
-            - target_audience
-            - industry
-            - goals
-    responses:
-        200:
-          description: In response, success and message are sent. Frontend should logout after successful response.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    description: Indicates if the request was successful
-                  message:
-                    type: string
-                    description: Message related to the request
-    """
-    return dashboard_controller.seo_optimisation_generator(
-        user=request.user,
-        business_type=request.json.get("business_type", None),
-        target_audience=request.json.get("target_audience", None),
-        industry=request.json.get("industry", None),
-        goals=request.json.get("goals", None),
-        user_ip=request.remote_addr,
-    )
-
-
 
 @bp.route("/social_media_post/generator/content", methods=["POST"])
 @authenticate

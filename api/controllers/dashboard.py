@@ -2,8 +2,10 @@ from bs4 import BeautifulSoup
 from http import HTTPStatus
 
 from api.middleware.error_handlers import internal_error_handler
-
 from api.assets import constants
+from api.models.maps_analysis import MapsAnalysis
+from api.models.maps_search_rel import MapsSearchRel
+from api.models.search_query import SearchQuery
 
 from api.utils.classifier_models import ClassifierModels
 from api.utils.content_db import ContentDataModel
@@ -26,12 +28,13 @@ from api.utils import logging_wrapper
 from api.models import db
 from api.models.content import Content
 from api.models.chat import Chat
-from api.models.youtube_seo_analysis import YouTubeSEOAnalysis
+from api.models.seo_project import SEOProject
+from api.utils.youtube_utils import YotubeSEOUtils
 
 logger = logging_wrapper.Logger(__name__)
 
 @internal_error_handler
-def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, user_ip):
+def seo_analyzer_create_project(user, business_type, target_audience, industry, goals, user_ip):
     # Validate input
     validation_response = APIInputValidator.validate_input_for_seo(
         business_type,
@@ -43,27 +46,56 @@ def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, 
     if validation_response:
         return validation_response
 
+    overall_goals = ", ".join(goals)
     country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
 
-    youtube_seo_data_model = YouTubeSEOAnalysis(
-        user_id=user.id,
-        business_type=business_type,
-        target_audience=target_audience,
-        industry=industry,
-        goals=goals,
-        country=country_name,
-        user_ip=user_ip,
-    )
-    add_commit_(youtube_seo_data_model)
+    if country_name is None:
+        country_name = "India"
 
-    # Generate YouTube search queries using GPT-4
     try:
-        youtube_search_query_arr = GeneratorModels.generate_youtube_search_text_gpt4(
-            user=user,
+        youtube_seo_data_model = SEOProject(
+            user_id=user.id,
             business_type=business_type,
             target_audience=target_audience,
             industry=industry,
-            location=country_name
+            goals=overall_goals,
+            country=country_name,
+            user_ip=user_ip,
+        )
+        add_commit_(youtube_seo_data_model)
+    except Exception as e:
+        logger.exception(e)
+        return bad_response(
+            message="Failed to create project",
+            data={"error": str(e)},
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+    return response(
+        success=True,
+        message="Project created successfully",
+        data=youtube_seo_data_model.to_dict(),
+    )
+
+@internal_error_handler
+def seo_analyzer_youtube(user, project_id):
+    if project_id is None:
+        return bad_response(
+            message="Project id is required",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+    
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
+    print(project_data_model)
+
+    # Generate YouTube search queries using GPT-4
+    try:
+        youtube_search_query_arr = YotubeSEOUtils.generate_youtube_search_text_gpt4(
+            user=user,
+            business_type=project_data_model.business_type,
+            target_audience=project_data_model.target_audience,
+            industry=project_data_model.industry,
+            location=project_data_model.country,
         )
     except Exception as e:
         logger.exception(str(e))
@@ -86,7 +118,7 @@ def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, 
 
     # Fetch YouTube video data
     try:
-        youtube_data = AssistantHubSEO.youtube_search(youtube_array_of_search, youtube_seo_data_model.id)
+        youtube_data = YotubeSEOUtils.youtube_search(youtube_array_of_search, project_data_model.id)
     except Exception as e:
         return response(
             success=False,
@@ -94,39 +126,39 @@ def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, 
         )
 
     # Extract keywords and phrases from video data
-    title_documents, description_documents = AssistantHubSEO.yotube_video_keywords_extraction(youtube_data)
+    title_documents, description_documents = YotubeSEOUtils.yotube_video_keywords_extraction(youtube_data)
 
     # Compute the TF-IDF matrix for title and description
-    title_tfidf_model, title_corpus, title_dictionary = AssistantHubSEO.compute_tfidf_matrix(title_documents)
-    description_tfidf_model, description_corpus, description_dictionary = AssistantHubSEO.compute_tfidf_matrix(description_documents)
+    title_tfidf_model, title_corpus, title_dictionary = YotubeSEOUtils.compute_tfidf_matrix(title_documents)
+    description_tfidf_model, description_corpus, description_dictionary = YotubeSEOUtils.compute_tfidf_matrix(description_documents)
 
     # Identify top keywords for title and description
-    top_title_keywords = AssistantHubSEO.identify_top_keywords(title_tfidf_model, title_corpus, title_dictionary)
-    top_description_keywords = AssistantHubSEO.identify_top_keywords(description_tfidf_model, description_corpus, description_dictionary)
+    top_title_keywords = YotubeSEOUtils.identify_top_keywords(title_tfidf_model, title_corpus, title_dictionary)
+    top_description_keywords = YotubeSEOUtils.identify_top_keywords(description_tfidf_model, description_corpus, description_dictionary)
 
     # Calculate the keyword scores for title and description
-    title_keyword_scores = AssistantHubSEO.calculate_keyword_score(top_title_keywords, youtube_data)
-    description_keyword_scores = AssistantHubSEO.calculate_keyword_score(top_description_keywords, youtube_data)
+    title_keyword_scores = YotubeSEOUtils.calculate_keyword_score(top_title_keywords, youtube_data)
+    description_keyword_scores = YotubeSEOUtils.calculate_keyword_score(top_description_keywords, youtube_data)
 
     # Rank the keywords based on their scores
-    ranked_title_keywords = AssistantHubSEO.rank_keywords(title_keyword_scores)
-    ranked_description_keywords = AssistantHubSEO.rank_keywords(description_keyword_scores)
+    ranked_title_keywords = YotubeSEOUtils.rank_keywords(title_keyword_scores)
+    ranked_description_keywords = YotubeSEOUtils.rank_keywords(description_keyword_scores)
 
     # Filter the keywords based on their scores
-    filtered_title_keywords = AssistantHubSEO.filter_keywords(ranked_title_keywords)
-    filtered_description_keywords = AssistantHubSEO.filter_keywords(ranked_description_keywords)
+    filtered_title_keywords = YotubeSEOUtils.filter_keywords(ranked_title_keywords)
+    filtered_description_keywords = YotubeSEOUtils.filter_keywords(ranked_description_keywords)
 
     # Combine the top keywords from titles and descriptions and remove duplicates
     combined_keywords = list(set(filtered_title_keywords + filtered_description_keywords))
 
     # Generate title templates using GPT-3.5 Turbo
     try:
-        title_templates = GeneratorModels.generate_title_templates_gpt4(
+        title_templates = YotubeSEOUtils.generate_title_templates_gpt4(
             user=user,
-            business_type=business_type,
-            target_audience=target_audience,
-            industry=industry,
-            location=country_name,
+            business_type=project_data_model.business_type,
+            target_audience=project_data_model.target_audience,
+            industry=project_data_model.industry,
+            location=project_data_model.country,
             num_templates=5  # You can adjust the number of templates generated
         )
     except Exception as e:
@@ -145,18 +177,19 @@ def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, 
             content_title = template.lower().replace("{keyword}", keyword)
             content_titles.append(content_title)
 
-    youtube_seo_data_model.suggestions = {
-        "title_templates": title_templates,
-        "content_titles": content_titles,
-        "filtered_title_keywords": filtered_title_keywords,
-        "filtered_description_keywords": filtered_description_keywords,
-    }
-
+    # TODO: Implement Suggestions
+    # project_data_model.suggestions = {
+    #     "title_templates": title_templates,
+    #     "content_titles": content_titles,
+    #     "filtered_title_keywords": filtered_title_keywords,
+    #     "filtered_description_keywords": filtered_description_keywords,
+    # }
     commit_()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
+        project = project_data_model.to_dict(),
         data=[data.to_dict() for data in youtube_data],
         title_keyword_scores=filtered_title_keywords,
         description_keyword_scores=filtered_description_keywords,
@@ -164,19 +197,14 @@ def seo_analyzer_youtube(user, business_type, target_audience, industry, goals, 
     )
 
 @internal_error_handler
-def seo_analyzer_news(user, business_type, target_audience, industry, goals, user_ip):
-    validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
-        industry,
-        goals,
-    )
-    
-    if validation_response:
-        return validation_response
+def seo_analyzer_news(user, project_id):
+    if project_id is None:
+        return bad_response(
+            message="Project id is required",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
 
-    overall_goals = ", ".join(goals)
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
 
     # Generate News search queries using GPT-4
     try:
@@ -187,7 +215,7 @@ def seo_analyzer_news(user, business_type, target_audience, industry, goals, use
         #     industry=industry,
         #     location=country_name
         # )
-        news_search_query = [f"1. {business_type} {target_audience} {industry} {country_name} news"]
+        news_search_query = [f"1. {project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country} news"]
     except Exception as e:
         logger.exception(str(e))
         return response(
@@ -206,7 +234,7 @@ def seo_analyzer_news(user, business_type, target_audience, industry, goals, use
             message="Unable to generate the search query.",
         )
 
-    news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search)
+    news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id)
     trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
     titles = [AssistantHubNewsAlgo.generate_title(keywords, user) for keywords in trending_topics]
 
@@ -219,27 +247,23 @@ def seo_analyzer_news(user, business_type, target_audience, industry, goals, use
 
 
 @internal_error_handler
-def seo_analyzer_places(user, business_type, target_audience, industry, goals, user_ip):
-    validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
-        industry,
-        goals,
-    )
-    
-    if validation_response:
-        return validation_response
+def seo_analyzer_places(user, project_id):
+    if project_id is None:
+        return bad_response(
+            message="Project id is required",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
 
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
     
     # Generate News search queries using GPT-4
     try:
         maps_search_query = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
             user=user,
-            business_type=business_type,
-            target_audience=target_audience,
-            industry=industry,
-            location=country_name
+            business_type=project_data_model.business_type,
+            target_audience=project_data_model.target_audience,
+            industry=project_data_model.industry,
+            location=project_data_model.country
         )
     except Exception as e:
         logger.exception(str(e))
@@ -253,6 +277,20 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
             success=False,
             message="Unable to generate the search query.",
         )
+    
+    search_model = SearchQuery.query.filter(
+        SearchQuery.search_query == maps_search_query[0],
+        SearchQuery.seo_project_id == project_id,
+        SearchQuery.type == constants.ProjectTypeCons.enum_maps,
+    ).first()
+
+    if search_model is None:
+        search_model = SearchQuery(
+            search_query = maps_search_query[0],
+            seo_project_id = project_id,
+            type = constants.ProjectTypeCons.enum_maps,
+        )
+        add_commit_(search_model)
 
     #4. Places search
     places_data = AssistantHubMapsAlgo.fetch_google_places(maps_search_query[0])
@@ -260,6 +298,13 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
     response_places_data = []
 
     for place in places_data:
+        map_model_db = (
+            MapsAnalysis.query
+            .filter(
+                MapsAnalysis.latitude == place["latitude"], 
+                MapsAnalysis.longitude == place["longitude"],
+            ).first()
+        )
         website = place["website"]
         
         new_snippet = f"Visit us at {place['name']} located at {place['address']} for the best experience."
@@ -275,21 +320,31 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
                 # Pass the place object to the process_text function
                 keywords = AssistantHubMapsAlgo.process_text(all_text, place)
                 list_of_keywords.extend(keywords)
-
-                place["title"] = title
-                place["snippets"] = snippets
-                place["urls"] = urls
-                place["keywords"] = keywords
-                place["optimized_snippets"] = place["snippets"] + [new_snippet]
+                place["optimized_snippets"] = snippets + [new_snippet]
 
                 response_places_data.append({
                     "address": place["address"],
                     "google_maps_url": place["google_maps_url"],
                     "name": place["name"],
                     "snippets": place["optimized_snippets"],
-                    "website": place["website"],
+                    "website": website,
                     "backlinks": len(urls),
                 })
+
+                if map_model_db is None:
+                    map_model_db = MapsAnalysis(
+                        address=str(place["address"]),
+                        map_url=str(place["google_maps_url"]),
+                        name=str(place["name"]),
+                        snippets=str(place["optimized_snippets"]),
+                        website=str(website),
+                        website_title=str(title),
+                        website_backlinks=str(urls),
+                        website_keywords=str(keywords),
+                        latitude=place["latitude"],
+                        longitude=place["longitude"],
+                    )
+                    add_commit_(map_model_db)
             else:
                 response_places_data.append({
                     "address": place["address"],
@@ -299,6 +354,21 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
                     "website": None,
                     "backlinks": None,
                 })
+
+                if map_model_db is None:
+                    map_model_db = MapsAnalysis(
+                        address=str(place["address"]),
+                        map_url=str(place["google_maps_url"]),
+                        name=str(place["name"]),
+                        snippets=str(place["optimized_snippets"]),
+                        website=str(website),
+                        website_title=None,
+                        website_backlinks=None,
+                        website_keywords=None,
+                        latitude=place["latitude"],
+                        longitude=place["longitude"],
+                    )
+                    add_commit_(map_model_db)
         else:
             response_places_data.append({
                 "address": place["address"],
@@ -308,6 +378,33 @@ def seo_analyzer_places(user, business_type, target_audience, industry, goals, u
                 "website": None,
                 "backlinks": None,
             })
+            
+            if map_model_db is None:
+                map_model_db = MapsAnalysis(
+                    address=str(place["address"]),
+                    map_url=str(place["google_maps_url"]),
+                    name=str(place["name"]),
+                    snippets=str(place["optimized_snippets"]),
+                    website=None,
+                    website_title=None,
+                    website_backlinks=None,
+                    website_keywords=None,
+                    latitude=place["latitude"],
+                    longitude=place["longitude"],
+                )
+                add_commit_(map_model_db)
+        
+        search_maps_rel_model = MapsSearchRel.query.filter(
+            MapsSearchRel.search_query_id == search_model.id,
+            MapsSearchRel.maps_analysis_id == map_model_db.id,
+        ).first()
+
+        if search_maps_rel_model is None:
+            search_maps_rel_model = MapsSearchRel(
+                search_query_id = search_model.id,
+                maps_analysis_id = map_model_db.id
+            )
+            add_commit_(search_maps_rel_model)
 
     geo_distribution = AssistantHubMapsAlgo.analyze_georaphic_distribution(places_data)
     
@@ -439,120 +536,6 @@ def seo_analyzer_online_forums(user, business_type, target_audience, industry, g
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data= analysis.get("posts", []),
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
-    )
-
-
-@internal_error_handler
-def seo_optimisation_generator(user, business_type, target_audience, industry, goals, user_ip):
-    validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
-        industry,
-        goals,
-    )
-    
-    if validation_response:
-        return validation_response
-
-    overall_goals = ", ".join(goals)
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
-    
-    query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    num_pages=1
-
-    #1. Search Engine Analysis
-    search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
-
-    # Analyse the google search results and get the keywords
-    search_analysis = AssistantHubSEO.analyze_google_search_results(search_results)
-
-    #2. Youtube Search
-    youtube_search_query = GeneratorModels.generate_youtube_search_text(
-        user=user,
-        bussiness_type=business_type,
-        target_audience=target_audience,
-        industry=industry,
-        goals=overall_goals,
-        location=country_name
-    )
-
-    youtube_array_of_search = DashboardUtils.create_array_from_text(youtube_search_query)
-    
-    if len(youtube_array_of_search) == 0:
-        youtube_query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    else:
-        youtube_query = youtube_array_of_search[0]
-        print(youtube_query)
-
-    youtube_data = AssistantHubSEO.youtube_search(youtube_query)
-
-    #3. News Search
-    news_search_query = GeneratorModels.generate_news_search_text(
-        user=user,
-        bussiness_type=business_type,
-        target_audience=target_audience,
-        industry=industry,
-        goals=overall_goals,
-        location=country_name
-    )
-
-    news_array_of_search = DashboardUtils.create_array_from_text(news_search_query)
-
-    if len(news_array_of_search) == 0:
-        news_query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    else:
-        news_query = news_array_of_search[0]
-        print(news_query)
-
-    news_data = AssistantHubSEO.fetch_google_news(news_query)
-
-    #4. Places search
-    places_data = AssistantHubSEO.fetch_google_places(query)
-    
-    #Competition Analysis
-    competitor_urls = AssistantHubSEO.fetch_competitors(query)
-    comptitor_analysis = []
-    competitor_display = []
-    competition_text_data = []
-
-    for url in competitor_urls:
-        html = AssistantHubSEO.fetch_html(url)
-
-        if html:
-            analysis = AssistantHubSEO.analyze_competion_page(html)
-            comptitor_analysis.append(analysis)
-            competitor_display.append({"title": analysis["title"], "url": url, "meta_description": "" if analysis["meta_description"] == None else analysis["meta_description"]})
-            competition_text_data.append(analysis["title"] + " " + ( "" if analysis["meta_description"] == None else analysis["meta_description"]))
-
-    #Online Social Forum Analysis
-    #TODO: Change this to a subreddit of the user's choice
-    subreddit_name = "photography"
-
-    analysis = AssistantHubSEO.analyze_reddit_subreddit(subreddit_name)
-    subreddit_text_data = [post.get("title", "") + " " + post.get("body", "") for post in analysis["posts"]]
-
-    search_text_data = [item.get("title", "") + " " + item.get("snippet", "") for item in search_results.get("items", [])]
-    youtube_text_data = [video.get("title", "") for video in youtube_data] if youtube_data else []
-    news_text_data = [item.get("title", "") + " " + item.get("snippet", "") for item in news_data.get("items", [])] if news_data else []
-
-    # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(search_text_data + news_text_data + youtube_text_data + competition_text_data + subreddit_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(search_text_data + news_text_data + youtube_text_data + competition_text_data + subreddit_text_data, max_keywords=50)
-
-    return response(
-        success=True,
-        message=constants.SuccessMessage.seo_analysis,
-        search_results=search_results,
-        search_results_analysis=search_analysis,
-        news_data=news_data,
-        youtube_data=youtube_data,
-        places_data=places_data,
-        competitor_data= competitor_display,
-        comptitor_analysis= comptitor_analysis,
-        online_forums= analysis,
         semantic_topics= semantic_keywords_and_topics["topics"],
         long_tail_keywords= long_tail_keywords,
         lsi_keywords= semantic_keywords_and_topics["keywords"],

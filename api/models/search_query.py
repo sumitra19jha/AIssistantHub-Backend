@@ -1,33 +1,40 @@
 import copy
+import enum
 from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
+from api.assets import constants
 from api.models import db
-from api.models.search_query import SearchQuery
-from api.models.youtube_video_analysis import YouTubeVideoAnalysis
+from api.models.seo_project import SEOProject
 
+class ProjectTypeEnums(str, enum.Enum):
+    youtube = constants.ProjectTypeCons.enum_youtube
+    news = constants.ProjectTypeCons.enum_news
+    maps = constants.ProjectTypeCons.enum_maps
+    google_search = constants.ProjectTypeCons.enum_google_search
+    reddit = constants.ProjectTypeCons.enum_reddit
 
 @dataclass
-class YouTubeSearchVideoRel(db.Model):
-    __tablename__ = "youtube_search_video_rel"
-
-    id: int
-    search_query_id: int
-    youtube_video_analysis_id: int
+class SearchQuery(db.Model):
+    __tablename__ = "search_query"
     
+    id: int
+    search_query: str
+    seo_project_id: int
+
     created_at: dt
     updated_at: dt
-
+    
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
-    search_query_id = db.Column(db.Integer, db.ForeignKey(SearchQuery.id), nullable=False)
-    youtube_video_analysis_id = db.Column(db.Integer, db.ForeignKey(YouTubeVideoAnalysis.id), nullable=False)
-
+    type = db.Column(db.Enum(ProjectTypeEnums), nullable=False)
+    search_query = db.Column(db.Text, nullable=False)
+    seo_project_id = db.Column(db.Integer, db.ForeignKey(SEOProject.id), nullable=False)
+    
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=dt.utcnow, default=dt.utcnow, nullable=False)
 
-    search_query = db.relationship(SearchQuery, backref="youtube_search_video_rel", lazy=True)
-    youtube_video_analysis = db.relationship(YouTubeVideoAnalysis, backref="youtube_search_video_rel", lazy=True)
+    seo_project = db.relationship(SEOProject, backref="search_query", lazy=True)
 
     def to_dict(self):
         assert self.id is not None

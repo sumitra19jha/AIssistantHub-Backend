@@ -13,8 +13,13 @@ from gensim.matutils import corpus2dense
 from collections import Counter
 from sklearn.cluster import KMeans
 from gensim.models.coherencemodel import CoherenceModel
+from api.models.news_analysis import NewsAnalysis
+from api.models.news_search_rel import NewsSearchRel
+from api.models.search_query import SearchQuery
 
+from api.assets import constants
 from api.utils import logging_wrapper
+from api.utils.db import add_commit_
 from config import Config
 
 logger = logging_wrapper.Logger(__name__)
@@ -155,11 +160,25 @@ class AssistantHubNewsAlgo:
     # Uses Google News API for search based on user Input
     # The current form of Query for Search is:
     #   "{business_type} {target_audience} {industry} {goals}"
-    def fetch_google_news(query_arr, num_results=5):
+    def fetch_google_news(query_arr, project_id, num_results=5):
         news_articles = []
         base_url = 'https://www.googleapis.com/customsearch/v1'
 
         for query in query_arr:
+            search_model = SearchQuery.query.filter(
+                SearchQuery.search_query == query,
+                SearchQuery.seo_project_id == project_id,
+                SearchQuery.type == constants.ProjectTypeCons.enum_news,
+            ).first()
+
+            if search_model is None:
+                search_model = SearchQuery(
+                    search_query=query,
+                    seo_project_id=project_id,
+                    type=constants.ProjectTypeCons.enum_news,
+                )
+                add_commit_(search_model)
+
             params = {
                 'q': f"{query} AND when:7d",  # Fetch articles from the past 7 days
                 'cx': Config.CUSTOM_SEARCH_ENGINE_ID,
@@ -174,7 +193,36 @@ class AssistantHubNewsAlgo:
             
             if response.status_code == 200:
                 results = response.json()
-                news_articles.extend(results.get('items', []))
+                news_article_items = results.get('items', [])
+                news_articles.extend(news_article_items)
+
+                for news_article_map in news_article_items:
+                    model_article = NewsAnalysis.query.filter(NewsAnalysis.link == news_article_map["link"]).first()
+
+                    if model_article is None:
+                        model_article = NewsAnalysis(
+                            title=news_article_map["htmlTitle"],
+                            display_link=news_article_map["displayLink"],
+                            formatted_url=news_article_map["formattedUrl"],
+                            snippet=news_article_map["htmlSnippet"],
+                            kind=news_article_map["kind"],
+                            link=news_article_map["link"],
+                            pagemap=news_article_map["pagemap"],
+                        )
+
+                        add_commit_(model_article)
+
+                    search_news_rel_model = NewsSearchRel.query.filter(
+                        NewsSearchRel.search_query_id == search_model.id,
+                        NewsSearchRel.news_analysis_id == model_article.id
+                    ).first()
+
+                    if search_news_rel_model is None:
+                        search_news_rel_model = NewsSearchRel(
+                            search_query_id=search_model.id,
+                            news_analysis_id=model_article.id
+                        )
+                        add_commit_(search_news_rel_model)
             else:
                 logger.exception(f"Error: {response.status_code}")
                 print(f"Error: {response.status_code}")
