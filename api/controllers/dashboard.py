@@ -11,6 +11,7 @@ from api.utils.dashboard import DashboardUtils
 from api.utils.db import add_commit_, add_flush_, commit_
 from api.utils.generator_models import GeneratorModels
 from api.utils.instructor import Instructor
+from api.utils.news_utlis import AssistantHubNewsAlgo
 from api.utils.prompt import PromptGenerator
 from api.utils.socket import Socket
 from api.utils.validator import APIInputValidator
@@ -176,38 +177,43 @@ def seo_analyzer_news(user, business_type, target_audience, industry, goals, use
     overall_goals = ", ".join(goals)
     country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
 
-    news_search_query = GeneratorModels.generate_news_search_text(
-        user=user,
-        bussiness_type=business_type,
-        target_audience=target_audience,
-        industry=industry,
-        goals=overall_goals,
-        location=country_name
-    )
+    # Generate News search queries using GPT-4
+    try:
+        # news_search_query = AssistantHubNewsAlgo.generate_news_search_text_gpt4(
+        #     user=user,
+        #     business_type=business_type,
+        #     target_audience=target_audience,
+        #     industry=industry,
+        #     location=country_name
+        # )
+        news_search_query = [f"1. {business_type} {target_audience} {industry} {country_name} news"]
+    except Exception as e:
+        logger.exception(str(e))
+        return response(
+            success=False,
+            message=f"Error generating search query: {str(e)}"
+        )
 
-    news_array_of_search = DashboardUtils.create_array_from_text(news_search_query)
+    news_array_of_search = DashboardUtils.preprocess_youtube_search_array(news_search_query)
 
-    if len(news_array_of_search) == 0:
-        news_query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    else:
-        news_query = news_array_of_search[0]
-        print(news_query)
+    # Remove short search queries
+    news_array_of_search = [query for query in news_array_of_search if len(query) >= 5]
 
-    news_data = AssistantHubSEO.fetch_google_news(news_query)
-    news_text_data = [item.get("title", "") + " " + item.get("snippet", "") for item in news_data.get("items", [])] if news_data else []
+    if not news_array_of_search:
+        return response(
+            success=False,
+            message="Unable to generate the search query.",
+        )
 
-    # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(news_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(news_text_data, max_keywords=50)
+    news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search)
+    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
+    titles = [AssistantHubNewsAlgo.generate_title(keywords, user) for keywords in trending_topics]
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data=news_data.get("items", []),
-        news= news_data,
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
+        data=news_articles,
+        suggestion_titles= [AssistantHubNewsAlgo.clean_title(title) for title in titles],
     )
 
 

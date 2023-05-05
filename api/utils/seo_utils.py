@@ -1,4 +1,3 @@
-import gensim
 from sklearn.metrics.pairwise import cosine_similarity
 from gensim import corpora, models, similarities
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -391,25 +390,6 @@ class AssistantHubSEO:
                 return []
 
         return videos
-
-    # Uses Google News API for search based on user Input
-    # The current form of Query for Search is:
-    #   "{business_type} {target_audience} {industry} {goals}"
-    def fetch_google_news(query):
-        url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            "key": Config.GOOGLE_SEARCH_API_KEY,
-            "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
-            "q": query,
-            "tbm": "nws"
-        }
-
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Error: {response.status_code}")
-            return None
 
     # Uses Google Places API for search based on user Input
     # The current form of Query for Search is:
