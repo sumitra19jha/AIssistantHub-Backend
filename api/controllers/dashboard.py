@@ -1,5 +1,7 @@
 from bs4 import BeautifulSoup
 from http import HTTPStatus
+from concurrent.futures import ThreadPoolExecutor
+from flask import current_app
 
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
@@ -90,7 +92,6 @@ def seo_analyzer_youtube(user, project_id):
         )
     
     project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
-    print(project_data_model)
 
     # Generate YouTube search queries using GPT-4
     try:
@@ -109,7 +110,7 @@ def seo_analyzer_youtube(user, project_id):
         )
 
     # Preprocess search queries
-    youtube_array_of_search = DashboardUtils.preprocess_youtube_search_array(youtube_search_query_arr)
+    youtube_array_of_search = DashboardUtils.preprocess_pointwise_search_array(youtube_search_query_arr)
 
     # Remove short search queries
     youtube_array_of_search = [query for query in youtube_array_of_search if len(query) >= 5]
@@ -159,10 +160,7 @@ def seo_analyzer_youtube(user, project_id):
     try:
         title_templates = YotubeSEOUtils.generate_title_templates_gpt4(
             user=user,
-            business_type=project_data_model.business_type,
-            target_audience=project_data_model.target_audience,
-            industry=project_data_model.industry,
-            location=project_data_model.country,
+            keywords_str=",".join(combined_keywords),
             num_templates=5  # You can adjust the number of templates generated
         )
     except Exception as e:
@@ -172,14 +170,7 @@ def seo_analyzer_youtube(user, project_id):
         )
 
     # Preprocess search queries
-    filtered_templates = DashboardUtils.preprocess_youtube_search_array(title_templates)
-
-    # Fill in the title templates with the top keywords to create content title variations
-    content_titles = []
-    for template in filtered_templates:
-        for keyword in combined_keywords:
-            content_title = template.lower().replace("{keyword}", keyword)
-            content_titles.append(content_title)
+    filtered_templates = DashboardUtils.preprocess_pointwise_search_array(title_templates)
 
     # TODO: Implement Suggestions
     # project_data_model.suggestions = {
@@ -195,9 +186,7 @@ def seo_analyzer_youtube(user, project_id):
         message=constants.SuccessMessage.seo_analysis,
         project = project_data_model.to_dict(),
         data=[data.to_dict() for data in youtube_data],
-        title_keyword_scores=filtered_title_keywords,
-        description_keyword_scores=filtered_description_keywords,
-        content_titles=content_titles,
+        title_suggestion=filtered_templates,
     )
 
 @internal_error_handler
@@ -227,7 +216,7 @@ def seo_analyzer_news(user, project_id):
             message=f"Error generating search query: {str(e)}"
         )
 
-    news_array_of_search = DashboardUtils.preprocess_youtube_search_array(news_search_query)
+    news_array_of_search = DashboardUtils.preprocess_pointwise_search_array(news_search_query)
 
     # Remove short search queries
     news_array_of_search = [query for query in news_array_of_search if len(query) >= 5]
@@ -240,7 +229,10 @@ def seo_analyzer_news(user, project_id):
 
     news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id)
     trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
-    titles = [AssistantHubNewsAlgo.generate_title(keywords, user) for keywords in trending_topics]
+    
+    with ThreadPoolExecutor() as executor:
+        titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user, current_app._get_current_object()) for keywords in trending_topics]
+        titles = [future.result() for future in titles_futures]
 
     return response(
         success=True,
@@ -447,9 +439,10 @@ def seo_analyzer_search_results(user, project_id):
 
     #1. Search Engine Analysis
     search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
-    search_result_items = search_results.get("items", [])
+    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(search_results)
+    titles = [AssistantHubNewsAlgo.generate_title(keywords, user) for keywords in trending_topics]
     
-    for src in search_result_items:
+    for src in search_results:
         src_model = (
             GoogleSearchAnalysis.query.filter(
                 GoogleSearchAnalysis.link == src.get("link", "")
@@ -484,22 +477,11 @@ def seo_analyzer_search_results(user, project_id):
             )
             add_commit_(google_search_rel)
 
-    # Analyse the google search results and get the keywords
-    search_analysis = AssistantHubSEO.analyze_google_search_results(search_results)
-    search_text_data = [item.get("title", "") + " " + item.get("snippet", "") for item in search_results.get("items", [])]
-
-    # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(search_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(search_text_data, max_keywords=50)
-
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data=search_results.get("items", []),
-        search_results_analysis=search_analysis,
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
+        data=search_results,
+        suggestion_titles= [AssistantHubNewsAlgo.clean_title(title) for title in titles],
     )
 
 @internal_error_handler
@@ -510,7 +492,6 @@ def seo_analyzer_competitors(user, project_id):
         )
 
     project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
-    
     query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
 
     search_model = SearchQuery.query.filter(
