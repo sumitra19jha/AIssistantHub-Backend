@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request
 
 from api.controllers import dashboard as dashboard_controller
 from api.utils.request import get_parsed_data_list
@@ -168,6 +168,7 @@ def seo_analyzer_places():
     return dashboard_controller.seo_analyzer_places(
         user=request.user,
         project_id=request.json.get("project_id", None),
+        app=current_app._get_current_object(),
     )
 
 @bp.route("/seo_optimisation/search_results", methods=["POST"])

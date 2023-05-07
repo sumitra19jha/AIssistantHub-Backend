@@ -21,9 +21,6 @@ from api.models.content import Content
 from api.middleware.error_handlers import internal_error_handler
 
 
-nltk.download('wordnet')
-
-
 openai.api_key = Config.OPENAI_API_KEY
 nlp = spacy.load("en_core_web_md")
 tool = language_tool_python.LanguageTool("en-US");

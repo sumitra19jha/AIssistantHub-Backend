@@ -3,6 +3,7 @@ from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
 from flask import current_app
 
+import concurrent.futures
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
 from api.models.competitor_search_rel import CompetitorSearchRel
@@ -38,6 +39,7 @@ from api.models.seo_project import SEOProject
 from api.utils.youtube_utils import YotubeSEOUtils
 
 logger = logging_wrapper.Logger(__name__)
+
 
 @internal_error_handler
 def seo_analyzer_create_project(user, business_type, target_audience, industry, goals, user_ip):
@@ -123,7 +125,18 @@ def seo_analyzer_youtube(user, project_id):
 
     # Fetch YouTube video data
     try:
-        youtube_data = YotubeSEOUtils.youtube_search(youtube_array_of_search, project_data_model.id)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_video_data = {executor.submit(YotubeSEOUtils.youtube_search, current_app._get_current_object(), query, project_id): query for query in youtube_array_of_search}
+            youtube_data = []
+            for future in concurrent.futures.as_completed(future_to_video_data):
+                query = future_to_video_data[future]
+                try:
+                    data = future.result()
+                    youtube_data.extend(data)
+                except Exception as e:
+                    logger.exception(f"Error fetching YouTube data for query {query}: {str(e)}")
+                    # Handle the exception as needed
+
     except Exception as e:
         return response(
             success=False,
@@ -184,7 +197,7 @@ def seo_analyzer_youtube(user, project_id):
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        project = project_data_model.to_dict(),
+        project=project_data_model.to_dict(),
         data=[data.to_dict() for data in youtube_data],
         title_suggestion=filtered_templates,
     )
@@ -229,7 +242,7 @@ def seo_analyzer_news(user, project_id):
 
     news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id)
     trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
-    
+
     with ThreadPoolExecutor() as executor:
         titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user, current_app._get_current_object()) for keywords in trending_topics]
         titles = [future.result() for future in titles_futures]
@@ -238,12 +251,12 @@ def seo_analyzer_news(user, project_id):
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=news_articles,
-        suggestion_titles= [AssistantHubNewsAlgo.clean_title(title) for title in titles],
+        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
     )
 
 
 @internal_error_handler
-def seo_analyzer_places(user, project_id):
+def seo_analyzer_places(user, project_id, app):
     if project_id is None:
         return bad_response(
             message="Project id is required",
@@ -251,7 +264,7 @@ def seo_analyzer_places(user, project_id):
         )
 
     project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
-    
+
     # Generate News search queries using GPT-4
     try:
         maps_search_query = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
@@ -267,13 +280,13 @@ def seo_analyzer_places(user, project_id):
             success=False,
             message=f"Error generating search query: {str(e)}"
         )
-    
+
     if not maps_search_query:
         return response(
             success=False,
             message="Unable to generate the search query.",
         )
-    
+
     search_model = SearchQuery.query.filter(
         SearchQuery.search_query == maps_search_query[0],
         SearchQuery.seo_project_id == project_id,
@@ -282,133 +295,104 @@ def seo_analyzer_places(user, project_id):
 
     if search_model is None:
         search_model = SearchQuery(
-            search_query = maps_search_query[0],
-            seo_project_id = project_id,
-            type = constants.ProjectTypeCons.enum_maps,
+            search_query=maps_search_query[0],
+            seo_project_id=project_id,
+            type=constants.ProjectTypeCons.enum_maps,
         )
         add_commit_(search_model)
 
-    #4. Places search
     places_data = AssistantHubMapsAlgo.fetch_google_places(maps_search_query[0])
-    list_of_keywords= []
-    response_places_data = []
 
-    for place in places_data:
-        map_model_db = (
-            MapsAnalysis.query
-            .filter(
-                MapsAnalysis.latitude == place["latitude"], 
-                MapsAnalysis.longitude == place["longitude"],
-            ).first()
+    def create_map_analysis(place, title=None, urls=None, keywords=None):
+        return MapsAnalysis(
+            address=str(place["address"]),
+            map_url=str(place["google_maps_url"]),
+            name=str(place["name"]),
+            snippets=str(place["optimized_snippets"]),
+            website=str(place.get("website")),
+            website_title=title,
+            website_backlinks=str(urls) if urls else None,
+            website_keywords=str(keywords) if keywords else None,
+            latitude=place["latitude"],
+            longitude=place["longitude"],
         )
-        website = place["website"]
-        
-        new_snippet = f"Visit us at {place['name']} located at {place['address']} for the best experience."
-        place["optimized_snippets"] = [new_snippet]
 
-        if website:
-            website_data = AssistantHubMapsAlgo.fetch_website_data(website)
+    set_of_keywords = set()
 
-            if website_data is not None:
-                title, snippets, urls = website_data
-                all_text = " ".join([title])
+    def analyze_place(place, app):
+        with app.app_context():
+            map_model_db = (
+                MapsAnalysis.query
+                .filter(
+                    MapsAnalysis.latitude == place["latitude"],
+                    MapsAnalysis.longitude == place["longitude"],
+                ).first()
+            )
 
-                # Pass the place object to the process_text function
-                keywords = AssistantHubMapsAlgo.process_text(all_text, place)
-                list_of_keywords.extend(keywords)
-                place["optimized_snippets"] = snippets + [new_snippet]
+            new_snippet = f"Visit us at {place['name']} located at {place['address']} for the best experience."
+            place["optimized_snippets"] = [new_snippet]
 
-                response_places_data.append({
-                    "address": place["address"],
-                    "google_maps_url": place["google_maps_url"],
-                    "name": place["name"],
-                    "snippets": place["optimized_snippets"],
-                    "website": website,
-                    "backlinks": len(urls),
-                })
-
-                if map_model_db is None:
-                    map_model_db = MapsAnalysis(
-                        address=str(place["address"]),
-                        map_url=str(place["google_maps_url"]),
-                        name=str(place["name"]),
-                        snippets=str(place["optimized_snippets"]),
-                        website=str(website),
-                        website_title=str(title),
-                        website_backlinks=str(urls),
-                        website_keywords=str(keywords),
-                        latitude=place["latitude"],
-                        longitude=place["longitude"],
-                    )
-                    add_commit_(map_model_db)
-            else:
-                response_places_data.append({
-                    "address": place["address"],
-                    "google_maps_url": place["google_maps_url"],
-                    "name": place["name"],
-                    "snippets": place["optimized_snippets"],
-                    "website": None,
-                    "backlinks": None,
-                })
-
-                if map_model_db is None:
-                    map_model_db = MapsAnalysis(
-                        address=str(place["address"]),
-                        map_url=str(place["google_maps_url"]),
-                        name=str(place["name"]),
-                        snippets=str(place["optimized_snippets"]),
-                        website=str(website),
-                        website_title=None,
-                        website_backlinks=None,
-                        website_keywords=None,
-                        latitude=place["latitude"],
-                        longitude=place["longitude"],
-                    )
-                    add_commit_(map_model_db)
-        else:
-            response_places_data.append({
+            response_place_data = {
                 "address": place["address"],
                 "google_maps_url": place["google_maps_url"],
                 "name": place["name"],
                 "snippets": place["optimized_snippets"],
                 "website": None,
                 "backlinks": None,
-            })
-            
-            if map_model_db is None:
-                map_model_db = MapsAnalysis(
-                    address=str(place["address"]),
-                    map_url=str(place["google_maps_url"]),
-                    name=str(place["name"]),
-                    snippets=str(place["optimized_snippets"]),
-                    website=None,
-                    website_title=None,
-                    website_backlinks=None,
-                    website_keywords=None,
-                    latitude=place["latitude"],
-                    longitude=place["longitude"],
+            }
+
+            if place.get("website"):
+                website_data = AssistantHubMapsAlgo.fetch_website_data(place["website"])
+
+                if website_data is not None:
+                    title, snippets, urls = website_data
+                    all_text = title
+                    keywords = AssistantHubMapsAlgo.process_text(all_text, place)
+                    set_of_keywords.update(keywords)
+                    place["optimized_snippets"] += snippets
+
+                    response_place_data.update({
+                        "website": place["website"],
+                        "backlinks": len(urls),
+                    })
+
+                    if map_model_db is None:
+                        map_model_db = create_map_analysis(place, title, urls, keywords)
+                        add_commit_(map_model_db)
+                else:
+                    if map_model_db is None:
+                        map_model_db = create_map_analysis(place)
+                        add_commit_(map_model_db)
+            else:
+                if map_model_db is None:
+                    map_model_db = create_map_analysis(place)
+                    add_commit_(map_model_db)
+
+            search_maps_rel_model = MapsSearchRel.query.filter(
+                MapsSearchRel.search_query_id == search_model.id,
+                MapsSearchRel.maps_analysis_id == map_model_db.id,
+            ).first()
+
+            if search_maps_rel_model is None:
+                search_maps_rel_model = MapsSearchRel(
+                    search_query_id=search_model.id,
+                    maps_analysis_id=map_model_db.id
                 )
-                add_commit_(map_model_db)
-        
-        search_maps_rel_model = MapsSearchRel.query.filter(
-            MapsSearchRel.search_query_id == search_model.id,
-            MapsSearchRel.maps_analysis_id == map_model_db.id,
-        ).first()
+                add_commit_(search_maps_rel_model)
 
-        if search_maps_rel_model is None:
-            search_maps_rel_model = MapsSearchRel(
-                search_query_id = search_model.id,
-                maps_analysis_id = map_model_db.id
-            )
-            add_commit_(search_maps_rel_model)
+            return response_place_data
 
+    with ThreadPoolExecutor() as executor:
+        response_places_data = executor.map(lambda place: analyze_place(place, app), places_data)
+
+    response_places_data = list(response_places_data)
     geo_distribution = AssistantHubMapsAlgo.analyze_georaphic_distribution(places_data)
-    
+
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=response_places_data,
-        keywords=list_of_keywords,
+        keywords=list(set_of_keywords),
         geo_distribution=geo_distribution,
     )
 
@@ -419,9 +403,10 @@ def seo_analyzer_search_results(user, project_id):
             message="Project id is required",
         )
 
-    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
+    project_data_model = SEOProject.query.filter(
+        SEOProject.id == project_id).first()
     query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
-    num_pages=1
+    num_pages = 1
 
     search_model = SearchQuery.query.filter(
         SearchQuery.search_query == query,
@@ -437,11 +422,14 @@ def seo_analyzer_search_results(user, project_id):
         )
         add_commit_(search_model)
 
-    #1. Search Engine Analysis
-    search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
-    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(search_results)
-    titles = [AssistantHubNewsAlgo.generate_title(keywords, user) for keywords in trending_topics]
-    
+    # 1. Search Engine Analysis
+    search_results = AssistantHubSEO.fetch_google_search_results(
+        query, num_pages)
+    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(
+        search_results)
+    titles = [AssistantHubNewsAlgo.generate_title(
+        keywords, user) for keywords in trending_topics]
+
     for src in search_results:
         src_model = (
             GoogleSearchAnalysis.query.filter(
@@ -463,16 +451,16 @@ def seo_analyzer_search_results(user, project_id):
                 formatted_url=src.get("formattedUrl", ""),
             )
             add_commit_(src_model)
-        
+
         google_search_rel = (
             GoogleSearchSearchRel.query.filter(
-                GoogleSearchSearchRel.google_search_analysis_id == src_model.id, 
+                GoogleSearchSearchRel.google_search_analysis_id == src_model.id,
                 GoogleSearchSearchRel.search_query_id == search_model.id
             ).first()
         )
         if google_search_rel is None:
             google_search_rel = GoogleSearchSearchRel(
-                google_search_analysis_id=src_model.id, 
+                google_search_analysis_id=src_model.id,
                 search_query_id=search_model.id,
             )
             add_commit_(google_search_rel)
@@ -481,7 +469,8 @@ def seo_analyzer_search_results(user, project_id):
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=search_results,
-        suggestion_titles= [AssistantHubNewsAlgo.clean_title(title) for title in titles],
+        suggestion_titles=[AssistantHubNewsAlgo.clean_title(
+            title) for title in titles],
     )
 
 @internal_error_handler
@@ -507,7 +496,7 @@ def seo_analyzer_competitors(user, project_id):
             type=constants.ProjectTypeCons.enum_competitor,
         )
         add_commit_(search_model)
-    
+
     #Competition Analysis
     competitor_urls = AssistantHubSEO.fetch_competitors(query)
     comptitor_analysis = []
@@ -520,9 +509,9 @@ def seo_analyzer_competitors(user, project_id):
         if html:
             analysis = AssistantHubSEO.analyze_competion_page(html)
             comptitor_analysis.append(analysis)
-            
+
             comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == url).first()
-            
+
             if comp_anl_model is None:
                 comp_anl_model = CompetitorAnalysis(
                     title=analysis.get("title", ""),
@@ -533,109 +522,118 @@ def seo_analyzer_competitors(user, project_id):
             
             competitor_search_rel = (
                 CompetitorSearchRel.query.filter(
-                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id, 
+                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id,
                     CompetitorSearchRel.search_query_id == search_model.id
                 ).first()
             )
             if competitor_search_rel is None:
                 competitor_search_rel = CompetitorSearchRel(
-                    comptitor_analysis_id=comp_anl_model.id, 
+                    comptitor_analysis_id=comp_anl_model.id,
                     search_query_id=search_model.id,
                 )
                 add_commit_(competitor_search_rel)
-            
-            competitor_display.append({"title": analysis.get("title", ""), "url": url, "meta_description": analysis.get("meta_description", "")})
-            competition_text_data.append((analysis.get("title") or "") + " " + (analysis.get("meta_description") or ""))
+
+            competitor_display.append({"title": analysis.get(
+                "title", ""), "url": url, "meta_description": analysis.get("meta_description", "")})
+            competition_text_data.append(
+                (analysis.get("title") or "") + " " + (analysis.get("meta_description") or ""))
         else:
-            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == url).first()
-            
+            comp_anl_model = CompetitorAnalysis.query.filter(
+                CompetitorAnalysis.link == url).first()
+
             if comp_anl_model is None:
                 comp_anl_model = CompetitorAnalysis(link=url)
                 add_commit_(comp_anl_model)
-            
+
             competitor_search_rel = (
                 CompetitorSearchRel.query.filter(
-                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id, 
+                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id,
                     CompetitorSearchRel.search_query_id == search_model.id
                 ).first()
             )
-            
+
             if competitor_search_rel is None:
                 competitor_search_rel = CompetitorSearchRel(
-                    comptitor_analysis_id=comp_anl_model.id, 
+                    comptitor_analysis_id=comp_anl_model.id,
                     search_query_id=search_model.id,
                 )
                 add_commit_(competitor_search_rel)
 
     # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(competition_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(competition_text_data, max_keywords=50, n_components=20)
+    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(
+        competition_text_data, num_topics=5)
+    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(
+        competition_text_data, max_keywords=50, n_components=20)
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data= competitor_display,
-        comptitor_analysis= comptitor_analysis,
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
+        data=competitor_display,
+        comptitor_analysis=comptitor_analysis,
+        semantic_topics=semantic_keywords_and_topics["topics"],
+        long_tail_keywords=long_tail_keywords,
+        lsi_keywords=semantic_keywords_and_topics["keywords"],
     )
 
 
 @internal_error_handler
 def seo_analyzer_online_forums(user, business_type, target_audience, industry, goals, user_ip):
     validation_response = APIInputValidator.validate_input_for_seo(
-        business_type, 
-        target_audience, 
+        business_type,
+        target_audience,
         industry,
         goals,
     )
-    
+
     if validation_response:
         return validation_response
 
     overall_goals = ", ".join(goals)
     country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
-    
-    query = f"{business_type} {target_audience} {industry} {overall_goals}"
-    num_pages=1
 
-    #Online Social Forum Analysis
-    #TODO: Change this to a subreddit of the user's choice
+    query = f"{business_type} {target_audience} {industry} {overall_goals}"
+    num_pages = 1
+
+    # Online Social Forum Analysis
+    # TODO: Change this to a subreddit of the user's choice
     subreddit_name = "photography"
 
     analysis = AssistantHubSEO.analyze_reddit_subreddit(subreddit_name)
-    subreddit_text_data = [post.get("title", "") + " " + post.get("body", "") for post in analysis["posts"]]
+    subreddit_text_data = [post.get(
+        "title", "") + " " + post.get("body", "") for post in analysis["posts"]]
 
     # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(subreddit_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(subreddit_text_data, max_keywords=50, n_components=20)
+    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(
+        subreddit_text_data, num_topics=5)
+    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(
+        subreddit_text_data, max_keywords=50, n_components=20)
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data= analysis.get("posts", []),
-        semantic_topics= semantic_keywords_and_topics["topics"],
-        long_tail_keywords= long_tail_keywords,
-        lsi_keywords= semantic_keywords_and_topics["keywords"],
+        data=analysis.get("posts", []),
+        semantic_topics=semantic_keywords_and_topics["topics"],
+        long_tail_keywords=long_tail_keywords,
+        lsi_keywords=semantic_keywords_and_topics["keywords"],
     )
+
 
 @internal_error_handler
 def generate_content_for_social_media(user, topic, platform, keywords, length, urls, user_ip):
     validation_response = APIInputValidator.validate_content_input_for_social_media(
-        topic, 
-        platform, 
+        topic,
+        platform,
         length,
     )
-    
+
     if validation_response:
         return validation_response
-    
+
     try:
         processed_input = InputPreprocessor.preprocess_user_input_for_social_media_post(
-            topic, 
-            urls, 
-            length, 
+            topic,
+            urls,
+            length,
             platform
         )
     except ValueError as e:
@@ -651,11 +649,12 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
             status_code=HTTPStatus.BAD_REQUEST,
         )
 
-    is_opinion = ClassifierModels.is_the_topic_opinion_based(processed_input['topic'])
+    is_opinion = ClassifierModels.is_the_topic_opinion_based(
+        processed_input['topic'])
 
     if is_opinion:
         web_searched_results = AssistantHubScrapper.search_and_crawl(
-            processed_input['topic'], 
+            processed_input['topic'],
             user_ip,
         )
 
@@ -692,11 +691,14 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
     )
 
     try:
-        assistant_response = GeneratorModels.generate_content(user, system_message, user_message)
-        ContentDataModel.update_content_model_after_successful_ai_response(assistant_response, content_data)
+        assistant_response = GeneratorModels.generate_content(
+            user, system_message, user_message)
+        ContentDataModel.update_content_model_after_successful_ai_response(
+            assistant_response, content_data)
     except Exception as e:
         assistant_response = None
-        ContentDataModel.update_content_model_after_failed_ai_response(content_data)
+        ContentDataModel.update_content_model_after_failed_ai_response(
+            content_data)
 
     if assistant_response == None:
         return response(
@@ -704,7 +706,7 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
             message="Unable to generate the content.",
             status_code=HTTPStatus.BAD_REQUEST,
         )
-        
+
     Instructor.handle_chat_instruction_for_social_media(
         user.name,
         content_data,
@@ -714,7 +716,7 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
 
     # Call the Node.js server to create a room
     Socket.create_room_for_content(
-        content_data.id, 
+        content_data.id,
         content_data.user_id,
     )
 
@@ -729,8 +731,8 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
 @internal_error_handler
 def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip):
     validation_response = APIInputValidator.validate_content_input(
-        type=type, 
-        topic=topic, 
+        type=type,
+        topic=topic,
         length=length
     )
 
@@ -783,11 +785,14 @@ def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip
     )
 
     try:
-        assistant_response = GeneratorModels.generate_content(user, system_message, user_message)
-        ContentDataModel.update_content_model_after_successful_ai_response(assistant_response, content_data)
+        assistant_response = GeneratorModels.generate_content(
+            user, system_message, user_message)
+        ContentDataModel.update_content_model_after_successful_ai_response(
+            assistant_response, content_data)
     except Exception as e:
         assistant_response = None
-        ContentDataModel.update_content_model_after_failed_ai_response(content_data)
+        ContentDataModel.update_content_model_after_failed_ai_response(
+            content_data)
 
     if assistant_response == None:
         return response(
@@ -795,7 +800,7 @@ def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip
             message="Unable to generate the content.",
             status_code=HTTPStatus.BAD_REQUEST,
         )
-    
+
     Instructor.handle_chat_instruction(
         name_of_user=user.name,
         content_data=content_data,
@@ -803,7 +808,7 @@ def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip
 
     # Call the Node.js server to create a room
     Socket.create_room_for_content(
-        content_data.id, 
+        content_data.id,
         content_data.user_id,
     )
 

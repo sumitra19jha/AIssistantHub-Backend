@@ -20,13 +20,17 @@ class AssistantHubMapsAlgo:
     def analyze_georaphic_distribution(array_of_maps_data):
         if not array_of_maps_data:
             return {}  # Return an empty dictionary if the input is empty
-        
+
         coordinates = np.array([[place["latitude"], place["longitude"]] for place in array_of_maps_data])
         
         # Granularity of the analysis
         num_clusters = 5
-        kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(coordinates)
 
+        # Handle the case when there are fewer samples than the desired number of clusters
+        if len(coordinates) < num_clusters:
+            num_clusters = len(coordinates)
+
+        kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(coordinates)
         for i, place in enumerate(array_of_maps_data):
             place["cluster_label"] = int(kmeans.labels_[i]) 
 

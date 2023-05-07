@@ -7,6 +7,7 @@ from isodate import parse_duration
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+import spacy
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -24,6 +25,7 @@ from config import Config
 from api.utils import logging_wrapper
 
 logger = logging_wrapper.Logger(__name__)
+nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 
 class YotubeSEOUtils:
     def generate_youtube_search_text_gpt4(user, business_type, target_audience, industry, location):
@@ -58,100 +60,102 @@ class YotubeSEOUtils:
     # Uses Youtube V3 API for search based on user Input
     # The current form of Query for Search is:
     #   "{business_type} {target_audience} {industry} {goals}"
-    def youtube_search(query_arr, seo_id, max_results=5):
-        youtube = build('youtube', 'v3', developerKey=Config.GOOGLE_YOUTUBE_1_API_KEY)
+    def youtube_search(app, query_arr, seo_id, max_results=5):
+        with app.app_context():
+            youtube = build('youtube', 'v3', developerKey=Config.GOOGLE_SEARCH_API_KEY)
 
-        video_response = []
-        video_ids = []
+            video_response = []
+            video_ids = []
 
-        # Calculate date one year ago from today
-        one_year_ago = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%SZ')
+            # Calculate date one year ago from today
+            one_year_ago = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        for query in query_arr:
-            try:
-                search_model = SearchQuery.query.filter(
-                    SearchQuery.search_query == query,
-                    SearchQuery.seo_project_id == seo_id,
-                    SearchQuery.type == constants.ProjectTypeCons.enum_youtube,
-                ).first()
+            for query in query_arr:
+                try:
+                    search_model = SearchQuery.query.filter(
+                        SearchQuery.search_query == query,
+                        SearchQuery.seo_project_id == seo_id,
+                        SearchQuery.type == constants.ProjectTypeCons.enum_youtube,
+                    ).first()
 
-                if search_model is None:
-                    search_model = SearchQuery(
-                        search_query=query,
-                        seo_project_id=seo_id,
-                        type=constants.ProjectTypeCons.enum_youtube,
-                    )
-                    add_commit_(search_model)
+                    if search_model is None:
+                        search_model = SearchQuery(
+                            search_query=query,
+                            seo_project_id=seo_id,
+                            type=constants.ProjectTypeCons.enum_youtube,
+                        )
+                        add_commit_(search_model)
 
-                search_response = youtube.search().list(
-                    q=query,
-                    part="id,snippet",
-                    maxResults=max_results,
-                    type='video',
-                    videoDefinition='high',
-                    order='viewCount',
-                    publishedAfter=one_year_ago
-                ).execute()
+                    search_response = youtube.search().list(
+                        q=query,
+                        part="id,snippet",
+                        maxResults=max_results,
+                        type='video',
+                        videoDefinition='high',
+                        order='viewCount',
+                        publishedAfter=one_year_ago
+                    ).execute()
 
-                for search_result in search_response.get("items", []):
-                    if search_result["id"]["kind"] == "youtube#video":
-                        video_id = search_result["id"]["videoId"]
-                        if video_id in video_ids:
-                            continue
+                    for search_result in search_response.get("items", []):
+                        if search_result["id"]["kind"] == "youtube#video":
+                            video_id = search_result["id"]["videoId"]
+                            if video_id in video_ids:
+                                continue
 
-                        video_info = youtube.videos().list(
-                            part="snippet,statistics,contentDetails",
-                            id=video_id
-                        ).execute()["items"][0]
+                            video_info = youtube.videos().list(
+                                part="snippet,statistics,contentDetails",
+                                id=video_id
+                            ).execute()["items"][0]
 
-                        video_url = f"https://www.youtube.com/watch?v={video_id}"
-                        thumbnail_url = search_result["snippet"]["thumbnails"]["default"]["url"]
-                        video_duration = parse_duration(video_info["contentDetails"]["duration"]).total_seconds()
+                            video_url = f"https://www.youtube.com/watch?v={video_id}"
+                            thumbnail_url = search_result["snippet"]["thumbnails"]["default"]["url"]
+                            video_duration = parse_duration(video_info["contentDetails"]["duration"]).total_seconds()
 
-                        video_model = YouTubeVideoAnalysis.query.filter(YouTubeVideoAnalysis.video_id == video_id).first()
+                            video_model = YouTubeVideoAnalysis.query.filter(YouTubeVideoAnalysis.video_id == video_id).first()
 
-                        if video_model is None:
-                            video_model = YouTubeVideoAnalysis(
-                                video_id=video_id,
-                                video_url=video_url,
-                                thumbnail_url=thumbnail_url,
-                                video_duration=video_duration,
-                                title=search_result["snippet"]["title"],
-                                description=video_info["snippet"]["description"],
-                                channel_title=search_result["snippet"]["channelTitle"],
-                                publish_date=video_info["snippet"]["publishedAt"],
-                                views=int(video_info["statistics"].get("viewCount", "-1")),
-                                likes_count=int(video_info["statistics"].get("likeCount", "-1")),
-                                comments_count=int(video_info["statistics"].get("commentCount", "-1"))
-                            )
-                            add_commit_(video_model)
+                            if video_model is None:
+                                video_model = YouTubeVideoAnalysis(
+                                    video_id=video_id,
+                                    video_url=video_url,
+                                    thumbnail_url=thumbnail_url,
+                                    video_duration=video_duration,
+                                    title=search_result["snippet"]["title"],
+                                    description=video_info["snippet"]["description"],
+                                    channel_title=search_result["snippet"]["channelTitle"],
+                                    publish_date=video_info["snippet"]["publishedAt"],
+                                    views=int(video_info["statistics"].get("viewCount", "-1")),
+                                    likes_count=int(video_info["statistics"].get("likeCount", "-1")),
+                                    comments_count=int(video_info["statistics"].get("commentCount", "-1"))
+                                )
+                                add_commit_(video_model)
 
-                        video_response.append(video_model)
+                            # Check if the video already exists in the video_response list
+                            if video_model not in video_response:
+                                video_response.append(video_model)
 
-                        search_video_rel_model = YouTubeSearchVideoRel.query.filter(
-                            YouTubeSearchVideoRel.search_query_id == search_model.id,
-                            YouTubeSearchVideoRel.youtube_video_analysis_id == video_model.id
-                        ).first()
+                            search_video_rel_model = YouTubeSearchVideoRel.query.filter(
+                                YouTubeSearchVideoRel.search_query_id == search_model.id,
+                                YouTubeSearchVideoRel.youtube_video_analysis_id == video_model.id
+                            ).first()
 
-                        if search_video_rel_model is None:
-                            search_video_rel_model = YouTubeSearchVideoRel(
-                                search_query_id=search_model.id,
-                                youtube_video_analysis_id=video_model.id,
-                            )
-                            add_commit_(search_video_rel_model)
+                            if search_video_rel_model is None:
+                                search_video_rel_model = YouTubeSearchVideoRel(
+                                    search_query_id=search_model.id,
+                                    youtube_video_analysis_id=video_model.id,
+                                )
+                                add_commit_(search_video_rel_model)
 
-                        video_ids.append(video_id)
+                            video_ids.append(video_id)
 
-            except HTTPError as e:
-                logger.exception(str(e))
-                return []
+                except HTTPError as e:
+                    logger.exception(str(e))
+                    return []
 
-        return video_response
+            return video_response
 
     def preprocess_text(text):
-        tokens = word_tokenize(text)
-        stop_words = set(stopwords.words('english'))
-        filtered_tokens = [token.lower() for token in tokens if token.isalnum() and token.lower() not in stop_words]
+        doc = nlp(text)
+        filtered_tokens = [token.text.lower() for token in doc if token.is_alpha and not token.is_stop]
         return filtered_tokens
 
     def yotube_video_keywords_extraction(video_data):
