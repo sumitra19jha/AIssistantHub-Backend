@@ -15,6 +15,7 @@ from api.models.maps_search_rel import MapsSearchRel
 from api.models.search_query import SearchQuery
 
 from api.utils.classifier_models import ClassifierModels
+from api.utils.competitors_util import CompetitorUtils
 from api.utils.content_db import ContentDataModel
 from api.utils.dashboard import DashboardUtils
 from api.utils.db import add_commit_, add_flush_, commit_
@@ -403,8 +404,7 @@ def seo_analyzer_search_results(user, project_id):
             message="Project id is required",
         )
 
-    project_data_model = SEOProject.query.filter(
-        SEOProject.id == project_id).first()
+    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
     query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
     num_pages = 1
 
@@ -423,13 +423,15 @@ def seo_analyzer_search_results(user, project_id):
         add_commit_(search_model)
 
     # 1. Search Engine Analysis
-    search_results = AssistantHubSEO.fetch_google_search_results(
-        query, num_pages)
-    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(
-        search_results)
-    titles = [AssistantHubNewsAlgo.generate_title(
-        keywords, user) for keywords in trending_topics]
+    search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
+    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(search_results)
+    with ThreadPoolExecutor() as executor:
+        titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user, current_app._get_current_object()) for keywords in trending_topics]
+        titles = [future.result() for future in titles_futures]
 
+    # Optimize database operations
+    google_search_analyses = []
+    google_search_search_rels = []
     for src in search_results:
         src_model = (
             GoogleSearchAnalysis.query.filter(
@@ -450,7 +452,18 @@ def seo_analyzer_search_results(user, project_id):
                 html_formatted_url=src.get("htmlFormattedUrl", ""),
                 formatted_url=src.get("formattedUrl", ""),
             )
-            add_commit_(src_model)
+            google_search_analyses.append(src_model)
+
+    # Add and commit all new GoogleSearchAnalysis instances
+    db.session.bulk_save_objects(google_search_analyses)
+    db.session.commit()
+
+    for src in search_results:
+        src_model = (
+            GoogleSearchAnalysis.query.filter(
+                GoogleSearchAnalysis.link == src.get("link", "")
+            ).first()
+        )
 
         google_search_rel = (
             GoogleSearchSearchRel.query.filter(
@@ -458,19 +471,23 @@ def seo_analyzer_search_results(user, project_id):
                 GoogleSearchSearchRel.search_query_id == search_model.id
             ).first()
         )
+        
         if google_search_rel is None:
             google_search_rel = GoogleSearchSearchRel(
                 google_search_analysis_id=src_model.id,
                 search_query_id=search_model.id,
             )
-            add_commit_(google_search_rel)
+            google_search_search_rels.append(google_search_rel)
+
+    # Add and commit all new GoogleSearchSearchRel instances
+    db.session.bulk_save_objects(google_search_search_rels)
+    db.session.commit()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=search_results,
-        suggestion_titles=[AssistantHubNewsAlgo.clean_title(
-            title) for title in titles],
+        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
     )
 
 @internal_error_handler
@@ -480,101 +497,119 @@ def seo_analyzer_competitors(user, project_id):
             message="Project id is required",
         )
 
-    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
-    query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
+    project_data_model = SEOProject.query.get(project_id)
 
-    search_model = SearchQuery.query.filter(
-        SearchQuery.search_query == query,
-        SearchQuery.seo_project_id == project_id,
-        SearchQuery.type == constants.ProjectTypeCons.enum_competitor,
-    ).first()
-
-    if search_model is None:
-        search_model = SearchQuery(
-            search_query=query,
-            seo_project_id=project_id,
-            type=constants.ProjectTypeCons.enum_competitor,
+    if project_data_model is None:
+        return bad_response(
+            message="Project not found",
         )
-        add_commit_(search_model)
 
-    #Competition Analysis
-    competitor_urls = AssistantHubSEO.fetch_competitors(query)
+    # Generate YouTube search queries using GPT-4
+    try:
+        competitor_search_query_arr = CompetitorUtils.generate_competitor_search_text_gpt4(
+            user=user,
+            business_type=project_data_model.business_type,
+            target_audience=project_data_model.target_audience,
+            industry=project_data_model.industry,
+            location=project_data_model.country,
+        )
+    except Exception as e:
+        logger.exception(str(e))
+        return response(
+            success=False,
+            message=f"Error generating search query: {str(e)}"
+        )
+
+    # Preprocess search queries
+    competitor_array_of_search = DashboardUtils.preprocess_pointwise_search_array(competitor_search_query_arr)
+
+    # Remove short search queries
+    competitor_array_of_search = [query for query in competitor_array_of_search if len(query) >= 5]
+
+    if not competitor_array_of_search:
+        return response(
+            success=False,
+            message="Unable to generate the search query.",
+        )
+
+    # Competition Analysis
+    competitor_urls = CompetitorUtils.fetch_competitors(competitor_array_of_search, project_id)
+
     comptitor_analysis = []
-    competitor_display = []
-    competition_text_data = []
+    urls = []
 
-    for url in competitor_urls:
-        html = AssistantHubSEO.fetch_html(url)
+    search_rel_dict = {}
+    new_competitor_analysis = []
+    new_competitor_search_rel = []
 
-        if html:
-            analysis = AssistantHubSEO.analyze_competion_page(html)
-            comptitor_analysis.append(analysis)
+    for search_query_id, webpages in competitor_urls.items():
+        for webpage in webpages:
+            if webpage["link"] in urls:
+                continue
 
-            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == url).first()
+            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == webpage["link"]).first()
 
             if comp_anl_model is None:
                 comp_anl_model = CompetitorAnalysis(
-                    title=analysis.get("title", ""),
-                    meta_description=analysis.get("meta_description", ""),
-                    link=url,
+                    title=webpage.get("title", ""),
+                    snippet=webpage.get("snippet", ""),
+                    link=webpage.get("link", ""),
+                    display_link=webpage.get("displayLink", ""),
+                    html_snippet=webpage.get("htmlSnippet", ""),
+                    html_title=webpage.get("htmlTitle", ""),
+                    pagemap=webpage.get("pagemap", ""),
+                    kind=webpage.get("kind", ""),
+                    html_formatted_url=webpage.get("htmlFormattedUrl", ""),
+                    formatted_url=webpage.get("formattedUrl", ""),
                 )
-                add_commit_(comp_anl_model)
-            
-            competitor_search_rel = (
-                CompetitorSearchRel.query.filter(
-                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id,
-                    CompetitorSearchRel.search_query_id == search_model.id
-                ).first()
-            )
-            if competitor_search_rel is None:
-                competitor_search_rel = CompetitorSearchRel(
-                    comptitor_analysis_id=comp_anl_model.id,
-                    search_query_id=search_model.id,
-                )
-                add_commit_(competitor_search_rel)
+                new_competitor_analysis.append(comp_anl_model)
 
-            competitor_display.append({"title": analysis.get(
-                "title", ""), "url": url, "meta_description": analysis.get("meta_description", "")})
-            competition_text_data.append(
-                (analysis.get("title") or "") + " " + (analysis.get("meta_description") or ""))
-        else:
-            comp_anl_model = CompetitorAnalysis.query.filter(
-                CompetitorAnalysis.link == url).first()
+    # Commit new CompetitorAnalysis objects to the database
+    db.session.bulk_save_objects(new_competitor_analysis)
+    db.session.commit()
 
-            if comp_anl_model is None:
-                comp_anl_model = CompetitorAnalysis(link=url)
-                add_commit_(comp_anl_model)
+    # Create CompetitorSearchRel objects for both new and existing CompetitorAnalysis models
+    for search_query_id, webpages in competitor_urls.items():
+        for webpage in webpages:
+            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == webpage["link"]).first()
+            if not comp_anl_model:
+                continue
 
             competitor_search_rel = (
                 CompetitorSearchRel.query.filter(
                     CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id,
-                    CompetitorSearchRel.search_query_id == search_model.id
+                    CompetitorSearchRel.search_query_id == int(search_query_id)
                 ).first()
             )
 
             if competitor_search_rel is None:
                 competitor_search_rel = CompetitorSearchRel(
                     comptitor_analysis_id=comp_anl_model.id,
-                    search_query_id=search_model.id,
+                    search_query_id=int(search_query_id),
                 )
-                add_commit_(competitor_search_rel)
+                new_competitor_search_rel.append(competitor_search_rel)
+                search_rel_dict[comp_anl_model.id] = competitor_search_rel
+
+            comptitor_analysis.append(webpage)
+            urls.append(webpage["link"])
+
+    # Bulk insert new CompetitorSearchRel objects
+    db.session.bulk_save_objects(new_competitor_search_rel)
+    db.session.commit()
 
     # NLP Analysis
-    semantic_keywords_and_topics = AssistantHubSEO.get_lsi_topic_and_keywords(
-        competition_text_data, num_topics=5)
-    long_tail_keywords = AssistantHubSEO.get_long_tail_keywords(
-        competition_text_data, max_keywords=50, n_components=20)
+    trending_topics = CompetitorUtils.keywords_titles_builder(comptitor_analysis)
+
+    with ThreadPoolExecutor() as executor:
+        titles_futures = [executor.submit(CompetitorUtils.generate_title, keywords, current_app._get_current_object()) for keywords in trending_topics]
+        titles = [future.result() for future in titles_futures]
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
-        data=competitor_display,
-        comptitor_analysis=comptitor_analysis,
-        semantic_topics=semantic_keywords_and_topics["topics"],
-        long_tail_keywords=long_tail_keywords,
-        lsi_keywords=semantic_keywords_and_topics["keywords"],
+        data=comptitor_analysis,
+        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
     )
-
 
 @internal_error_handler
 def seo_analyzer_online_forums(user, business_type, target_audience, industry, goals, user_ip):

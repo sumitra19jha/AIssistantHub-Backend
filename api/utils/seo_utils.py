@@ -93,21 +93,6 @@ class AssistantHubSEO:
         # Return the most common keywords and their frequencies
         return token_freq.most_common()
 
-    def fetch_competitors(query):
-        url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            "key": Config.GOOGLE_SEARCH_API_KEY,
-            "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
-            "q": query
-        }
-
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            return [item["link"] for item in response.json().get("items", [])]
-        else:
-            print(f"Error: {response.status_code}")
-            return []
-
     def analyze_competion_page(html):
         soup = BeautifulSoup(html, "html.parser")
 
