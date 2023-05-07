@@ -12,6 +12,7 @@ class NewsAnalysis(db.Model):
 
     id: int
     title: str
+    html_title: str
     display_link: str
     formatted_url: str
     snippet: str
@@ -25,6 +26,7 @@ class NewsAnalysis(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     title = db.Column(db.Text, nullable=False)
+    html_title = db.Column(db.Text, nullable=True)
     display_link = db.Column(db.Text, nullable=True)
     formatted_url = db.Column(db.Text, nullable=True)
     snippet = db.Column(db.Text, nullable=True)

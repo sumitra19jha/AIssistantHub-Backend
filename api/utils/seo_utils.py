@@ -20,7 +20,7 @@ from api.models.search_query import SearchQuery
 from api.assets import constants
 from api.utils.db import add_commit_
 from config import Config
-
+from api.utils import logging_wrapper
 import nltk
 
 # Download the NLTK stop words and tokenize resources
@@ -33,13 +33,14 @@ reddit = praw.Reddit(
     user_agent=Config.REDDIT_USER_AGENT,
 )
 
+logger = logging_wrapper.Logger(__name__)
 
 class AssistantHubSEO:
     # Uses Google Search Engine and search based on user Input
     # The current form of Query is:
     #   "{business_type} {target_audience} {industry} {goals}"
     def fetch_google_search_results(query, num_pages=1):
-        results = []
+        search_articles = []
 
         for i in range(num_pages):
             start = i * 10 + 1
@@ -55,11 +56,14 @@ class AssistantHubSEO:
 
             response = requests.get(url, params=params)
             if response.status_code == 200:
-                results.extend(response.json()["items"])
+                results = response.json()
+                search_article_items = results.get('items', [])
+                search_articles.extend(search_article_items)
             else:
+                logger.exception(f"Error: {response.status_code}")
                 print(f"Error: {response.status_code}")
-                break
-        return {"items": results}
+                continue
+        return search_articles
 
     def analyze_google_search_results(search_results):
         # Initialize the stop words and stemmer

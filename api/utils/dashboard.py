@@ -72,7 +72,7 @@ class DashboardUtils:
         except Exception as e:
             return []
         
-    def preprocess_youtube_search_array(arr):
+    def preprocess_pointwise_search_array(arr):
         try:
             # Remove leading numbers, quotes, and extra spaces
             processed_array = [query.split('. ')[1].strip('"') for query in arr if '. ' in query]

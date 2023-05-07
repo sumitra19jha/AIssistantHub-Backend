@@ -1,6 +1,8 @@
 import re
 import json
 import requests
+from flask import current_app
+import concurrent.futures
 
 import nltk
 import openai
@@ -13,6 +15,8 @@ from gensim.matutils import corpus2dense
 from collections import Counter
 from sklearn.cluster import KMeans
 from gensim.models.coherencemodel import CoherenceModel
+from concurrent.futures import ThreadPoolExecutor
+
 from api.models.news_analysis import NewsAnalysis
 from api.models.news_search_rel import NewsSearchRel
 from api.models.search_query import SearchQuery
@@ -99,33 +103,34 @@ class AssistantHubNewsAlgo:
         return trending_topics
 
     # Generating content titles
-    def generate_title(keywords, user):
-        # Join the top keywords with a comma
-        keywords_str = ", ".join([keyword[0] for keyword in keywords])
+    def generate_title(keywords, user, app):
+        with app.app_context():
+            # Join the top keywords with a comma
+            keywords_str = ", ".join([keyword[0] for keyword in keywords])
 
-        system_prompt = {
-            "role": "system",
-            "content": "You are an AI assistant trained to generate relevant and engaging article titles based on a set of keywords. Generate a title using the following keywords."
-        }
+            system_prompt = {
+                "role": "system",
+                "content": "You are an AI assistant trained to generate relevant and engaging article titles based on a set of keywords. Generate a title using the following keywords."
+            }
 
-        user_prompt = {
-            "role": "user",
-            "content": f"Keywords: {keywords_str}"
-        }
+            user_prompt = {
+                "role": "user",
+                "content": f"Keywords: {keywords_str}"
+            }
 
-        assistant_response = openai.ChatCompletion.create(
-            model=Config.OPENAI_MODEL_GPT4,
-            messages=[system_prompt, user_prompt],
-            temperature=0.7,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            user=str(user.id),
-        )
+            assistant_response = openai.ChatCompletion.create(
+                model=Config.OPENAI_MODEL_GPT4,
+                messages=[system_prompt, user_prompt],
+                temperature=0.7,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                user=str(user.id),
+            )
 
-        # Extract and format the title
-        title = assistant_response["choices"][0]["message"]["content"].strip()
-        return title
+            # Extract and format the title
+            title = assistant_response["choices"][0]["message"]["content"].strip()
+            return title
 
     # Fetch News search text
     def generate_news_search_text_gpt4(user, business_type, target_audience, industry, location):
@@ -164,44 +169,58 @@ class AssistantHubNewsAlgo:
         news_articles = []
         base_url = 'https://www.googleapis.com/customsearch/v1'
 
-        for query in query_arr:
-            search_model = SearchQuery.query.filter(
-                SearchQuery.search_query == query,
-                SearchQuery.seo_project_id == project_id,
-                SearchQuery.type == constants.ProjectTypeCons.enum_news,
-            ).first()
+        search_models = SearchQuery.query.filter(
+            SearchQuery.seo_project_id == project_id,
+            SearchQuery.type == constants.ProjectTypeCons.enum_news,
+            SearchQuery.search_query.in_(query_arr)
+        ).all()
 
-            if search_model is None:
-                search_model = SearchQuery(
-                    search_query=query,
-                    seo_project_id=project_id,
-                    type=constants.ProjectTypeCons.enum_news,
-                )
-                add_commit_(search_model)
+        existing_search_models = {model.search_query: model for model in search_models}
+        search_models_to_add = [query for query in query_arr if query not in existing_search_models]
 
-            params = {
-                'q': f"{query} AND when:7d",  # Fetch articles from the past 7 days
-                'cx': Config.CUSTOM_SEARCH_ENGINE_ID,
-                'key': Config.GOOGLE_SEARCH_API_KEY,
-                'num': num_results,
-                'sort': 'date',  # Sort results by recency
-                'lr': 'lang_en',  # Fetch articles in English
-                'tbm': 'nws',  # Filter results to news articles only
-            }
+        for query in search_models_to_add:
+            search_model = SearchQuery(
+                search_query=query,
+                seo_project_id=project_id,
+                type=constants.ProjectTypeCons.enum_news,
+            )
+            add_commit_(search_model)
+            existing_search_models[query] = search_model
+        
+        def fetch_news_for_query(query, app):
+            with app.app_context():
+                search_model = existing_search_models[query]
+                params = {
+                    'q': f"{query} AND when:7d",  # Fetch articles from the past 7 days
+                    'cx': Config.CUSTOM_SEARCH_ENGINE_ID,
+                    'key': Config.GOOGLE_SEARCH_API_KEY,
+                    'num': num_results,
+                    'sort': 'date',  # Sort results by recency
+                    'lr': 'lang_en',  # Fetch articles in English
+                    'tbm': 'nws',  # Filter results to news articles only
+                }
 
-            response = requests.get(base_url, params=params)
-            
-            if response.status_code == 200:
-                results = response.json()
-                news_article_items = results.get('items', [])
-                news_articles.extend(news_article_items)
+                response = requests.get(base_url, params=params)
+                fetched_news_articles = []
 
-                for news_article_map in news_article_items:
-                    model_article = NewsAnalysis.query.filter(NewsAnalysis.link == news_article_map["link"]).first()
+                if response.status_code == 200:
+                    results = response.json()
+                    news_article_items = results.get('items', [])
+                    fetched_news_articles.extend(news_article_items)
 
-                    if model_article is None:
+                    existing_news_articles = NewsAnalysis.query.filter(
+                        NewsAnalysis.link.in_([news_article["link"] for news_article in news_article_items])
+                    ).all()
+
+                    existing_news_article_links = {article.link: article for article in existing_news_articles}
+                    new_news_articles = [
+                        item for item in news_article_items if item["link"] not in existing_news_article_links
+                    ]
+
+                    for news_article_map in new_news_articles:
                         model_article = NewsAnalysis(
-                            title=news_article_map["htmlTitle"],
+                            title=news_article_map["title"],
+                            html_title=news_article_map["htmlTitle"],
                             display_link=news_article_map["displayLink"],
                             formatted_url=news_article_map["formattedUrl"],
                             snippet=news_article_map["htmlSnippet"],
@@ -211,21 +230,34 @@ class AssistantHubNewsAlgo:
                         )
 
                         add_commit_(model_article)
+                        existing_news_article_links[news_article_map["link"]] = model_article
 
-                    search_news_rel_model = NewsSearchRel.query.filter(
-                        NewsSearchRel.search_query_id == search_model.id,
-                        NewsSearchRel.news_analysis_id == model_article.id
-                    ).first()
+                    for news_article_map in news_article_items:
+                        model_article = existing_news_article_links[news_article_map["link"]]
 
-                    if search_news_rel_model is None:
-                        search_news_rel_model = NewsSearchRel(
-                            search_query_id=search_model.id,
-                            news_analysis_id=model_article.id
-                        )
-                        add_commit_(search_news_rel_model)
-            else:
-                logger.exception(f"Error: {response.status_code}")
-                print(f"Error: {response.status_code}")
-                return None
+                        search_news_rel_model = NewsSearchRel.query.filter(
+                            NewsSearchRel.search_query_id == search_model.id,
+                            NewsSearchRel.news_analysis_id == model_article.id
+                        ).first()
 
+                        if search_news_rel_model is None:
+                            search_news_rel_model = NewsSearchRel(
+                                search_query_id=search_model.id,
+                                news_analysis_id=model_article.id
+                            )
+                            add_commit_(search_news_rel_model)
+                else:
+                    logger.exception(f"Error: {response.status_code}")
+                    print(f"Error: {response.status_code}")
+                    return None
+
+                return fetched_news_articles
+
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(fetch_news_for_query, query, current_app._get_current_object()): query for query in query_arr}
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    news_articles.extend(result)
+        
         return news_articles

@@ -244,16 +244,16 @@ class YotubeSEOUtils:
         filtered_keywords = [kw for kw, score in ranked_keywords if YotubeSEOUtils.is_relevant_keyword(kw)]
         return filtered_keywords
 
-    def generate_title_templates_gpt4(user, business_type, target_audience, industry, location, num_templates=5):
+    def generate_title_templates_gpt4(user, keywords_str, num_templates=5):
         try:
             system_prompt = {
                 "role": "system",
-                "content": "You are a Youtube Video title template generator assistant. Your primary work is to write title template for youtube based on user input that provides relevant results which will be helpful for users.\n\nYour response should be pointwise."
+                "content": "You are an AI assistant trained to generate relevant and engaging article titles based on a set of keywords. Generate 10 title using the following keywords."
             }
 
             user_prompt = {
                 "role": "user",
-                "content": f"Generate {num_templates} content title templates for a {business_type} business targeting {target_audience} in the {industry} industry located in {location}. Include a '{{keyword}}' placeholder in each template where a keyword will be inserted."
+                "content": f"Keywords: {keywords_str}"
             }
 
             assistant_response = openai.ChatCompletion.create(
