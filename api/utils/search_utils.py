@@ -1,33 +1,33 @@
-from httpx import HTTPError
-import openai
 import re
 import nltk
-import requests
+
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from gensim.corpora import Dictionary
-from collections import Counter
-from sklearn.cluster import KMeans
-from gensim.matutils import corpus2dense
-from gensim.models.coherencemodel import CoherenceModel
 from gensim.models import TfidfModel, LdaModel
+from gensim.corpora import Dictionary
+from gensim.matutils import corpus2dense
+from collections import Counter
+from gensim.models.coherencemodel import CoherenceModel
+import openai
+from sklearn.cluster import KMeans
 from api.models.analysis import Analysis
 from api.models.search_analysis_rel import SearchAnalysisRel
-from api.models.search_query import SearchQuery
 
+from api.models.search_query import SearchQuery
 from api.assets import constants
 from api.utils.db import add_commit_
 from config import Config
+import requests
 from api.utils import logging_wrapper
 
 logger = logging_wrapper.Logger(__name__)
 
-class CompetitorUtils:
+class GoogleSearchUtils:
     def get_data(project_id):
         searches = (
             SearchQuery.query.filter(
                 SearchQuery.seo_project_id == project_id,
-                SearchQuery.type == constants.ProjectTypeCons.enum_competitor,
+                SearchQuery.type == constants.ProjectTypeCons.enum_google_search,
             ).all()
         )
 
@@ -44,12 +44,11 @@ class CompetitorUtils:
         analysis_data = (
             Analysis.query.filter(
                 Analysis.id.in_(analysis_ids),
-                Analysis.type == constants.ProjectTypeCons.enum_competitor,
+                Analysis.type == constants.ProjectTypeCons.enum_google_search,
             ).all()
         )
 
-        comptitor_analysis = []
-
+        search_data = []
         for analysis in analysis_data:
             response = {
                 "id": analysis.id,
@@ -65,77 +64,53 @@ class CompetitorUtils:
                 "formattedUrl": analysis.formatted_url,
             }
 
-            comptitor_analysis.append(response)
+            search_data.append(response)
 
-        return comptitor_analysis
+        return search_data
 
-    def generate_competitor_search_text_gpt4(user_id, business_type, target_audience, industry, location):
-        try:
-            system_prompt = {
-                "role": "system",
-                "content": "You are a Competitor finder assistant. Your primary work is to write search queries based on user input that provides relevant results which will be helpful for users.\n\nYour response should be pointwise."
-            }
+    def generate_search_query(project_data_model):
+        query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
+        search_model = SearchQuery.query.filter(
+            SearchQuery.search_query == query,
+            SearchQuery.seo_project_id == project_data_model.id,
+            SearchQuery.type == constants.ProjectTypeCons.enum_google_search,
+        ).first()
 
-            user_prompt = {
-                "role": "user",
-                "content": f"User Input\n```\nBusiness type: {business_type}\nTarget audience: {target_audience}\nIndustry: {industry}\nLocation: {location}\n```"
-            }
-
-            assistant_response = openai.ChatCompletion.create(
-                model=Config.OPENAI_MODEL_GPT4,
-                messages=[system_prompt, user_prompt],
-                temperature=0.7,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
-                user=str(user_id),
+        if search_model is None:
+            search_model = SearchQuery(
+                search_query=query,
+                seo_project_id=project_data_model.id,
+                type=constants.ProjectTypeCons.enum_google_search,
             )
+            add_commit_(search_model)
 
-            # Extract and format search queries as an array
-            search_queries = assistant_response["choices"][0]["message"]["content"].strip().split("\n")
-            return search_queries
-        except Exception as e:
-            logger.exception(str(e))
-            return None
+        return query, search_model.id
 
-    
-    def fetch_competitors(query_arr, project_id, max_results=5):
-        competitor_urls = {}
-        url = "https://www.googleapis.com/customsearch/v1"
-            
-        for query in query_arr:
-            try:
-                search_model = SearchQuery.query.filter(
-                    SearchQuery.search_query == query,
-                    SearchQuery.seo_project_id == project_id,
-                    SearchQuery.type == constants.ProjectTypeCons.enum_competitor,
-                ).first()
+    def fetch_google_search_results(query, num_pages=1):
+        search_articles = []
 
-                if search_model is None:
-                    search_model = SearchQuery(
-                        search_query=query,
-                        seo_project_id=project_id,
-                        type=constants.ProjectTypeCons.enum_competitor,
-                    )
-                    add_commit_(search_model)
+        for i in range(num_pages):
+            start = i * 10 + 1
+            url = "https://www.googleapis.com/customsearch/v1"
+            params = {
+                "key": Config.GOOGLE_SEARCH_API_KEY,
+                "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
+                "q": query,
+                "start": start,
+                'sort': 'date',  # Sort results by recency
+                'lr': 'lang_en',  # Fetch articles in English
+            }
 
-                params = {
-                    "key": Config.GOOGLE_SEARCH_API_KEY,
-                    "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
-                    "q": query,
-                    'num': max_results,
-                }
-
-                response = requests.get(url, params=params)
-                if response.status_code == 200:
-                    competitor_urls[search_model.id] = response.json().get("items", [])
-                else:
-                    continue
-            except HTTPError as e:
-                logger.exception(str(e))
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                results = response.json()
+                search_article_items = results.get('items', [])
+                search_articles.extend(search_article_items)
+            else:
+                logger.exception(f"Error: {response.status_code}")
+                print(f"Error: {response.status_code}")
                 continue
-        
-        return competitor_urls
+        return search_articles
 
     # Preprocessing function
     def preprocess(text):
@@ -149,8 +124,8 @@ class CompetitorUtils:
 
     def keywords_titles_builder(news_data):
         # Preprocess the articles
-        articles = [(article.get("title", "") + article.get("snippet", "")) for article in news_data]
-        preprocessed_articles = [CompetitorUtils.preprocess(article) for article in articles]
+        articles = [article["snippet"] for article in news_data]
+        preprocessed_articles = [GoogleSearchUtils.preprocess(article) for article in articles]
 
         # Build a dictionary and a corpus for the articles
         dictionary = Dictionary(preprocessed_articles)
@@ -194,13 +169,13 @@ class CompetitorUtils:
             cluster_articles = [article for article, c in zip(articles, clusters) if c == cluster]
             cluster_keywords = Counter()
             for article in cluster_articles:
-                article_keywords = CompetitorUtils.preprocess(article)
+                article_keywords = GoogleSearchUtils.preprocess(article)
                 cluster_keywords.update(article_keywords)
             trending_topics.append(cluster_keywords.most_common(5))
 
         return trending_topics
 
-    def generate_title(user_id, keywords, app):
+    def generate_title(keywords, user_id, app):
         with app.app_context():
             # Join the top keywords with a comma
             keywords_str = ", ".join([keyword[0] for keyword in keywords])
@@ -228,3 +203,12 @@ class CompetitorUtils:
             # Extract and format the title
             title = assistant_response["choices"][0]["message"]["content"].strip()
             return title
+
+    def clean_title(title):
+        # Remove characters like "\", "/", and quotes
+        cleaned_title = re.sub(r'[\\\/"]', '', title)
+
+        # Remove extra spaces
+        cleaned_title = re.sub(r'\s+', ' ', cleaned_title).strip()
+
+        return cleaned_title

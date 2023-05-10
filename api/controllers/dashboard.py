@@ -1,17 +1,13 @@
 from bs4 import BeautifulSoup
 from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
-from flask import current_app
+from flask import current_app, session
 
 import concurrent.futures
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
-from api.models.competitor_search_rel import CompetitorSearchRel
-from api.models.comptitor_analysis import CompetitorAnalysis
-from api.models.google_search_analysis import GoogleSearchAnalysis
-from api.models.google_search_search_rel import GoogleSearchSearchRel
-from api.models.maps_analysis import MapsAnalysis
-from api.models.maps_search_rel import MapsSearchRel
+from api.models.analysis import Analysis
+from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
 
 from api.utils.classifier_models import ClassifierModels
@@ -24,6 +20,7 @@ from api.utils.instructor import Instructor
 from api.utils.maps_utils import AssistantHubMapsAlgo
 from api.utils.news_utlis import AssistantHubNewsAlgo
 from api.utils.prompt import PromptGenerator
+from api.utils.search_utils import GoogleSearchUtils
 from api.utils.socket import Socket
 from api.utils.validator import APIInputValidator
 from api.utils.input_preprocessor import InputPreprocessor
@@ -187,12 +184,12 @@ def seo_analyzer_youtube(user, project_id):
     filtered_templates = DashboardUtils.preprocess_pointwise_search_array(title_templates)
 
     # TODO: Implement Suggestions
-    # project_data_model.suggestions = {
-    #     "title_templates": title_templates,
-    #     "content_titles": content_titles,
-    #     "filtered_title_keywords": filtered_title_keywords,
-    #     "filtered_description_keywords": filtered_description_keywords,
-    # }
+    project_data_model.youtube_suggestions = {
+        "title_templates": title_templates,
+        "filtered_templates": filtered_templates,
+        "filtered_title_keywords": filtered_title_keywords,
+        "filtered_description_keywords": filtered_description_keywords,
+    }
     commit_()
 
     return response(
@@ -211,7 +208,32 @@ def seo_analyzer_news(user, project_id):
             status_code=HTTPStatus.BAD_REQUEST,
         )
 
-    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
+    # Due to multiple session used user id needs to be stored in seprate variable
+    user_id = user.id
+
+    project_data_model = (
+        SEOProject.query
+        .filter(
+            SEOProject.id == project_id,
+            SEOProject.user_id == user_id,
+        ).first()
+    )
+
+    if project_data_model is None:
+        return bad_response(
+            message="Project not found",
+            status_code=HTTPStatus.NOT_FOUND,
+        )
+
+    if project_data_model.news_suggestions is not None:
+        news_data = AssistantHubNewsAlgo.get_data(project_id)
+
+        return response(
+            success=True,
+            message=constants.SuccessMessage.seo_analysis,
+            data=news_data,
+            suggestion_titles=project_data_model.news_suggestions["suggestion_titles"],
+        )
 
     # Generate News search queries using GPT-4
     try:
@@ -244,15 +266,21 @@ def seo_analyzer_news(user, project_id):
     news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id)
     trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
 
+    # seo_analyzer_news function
     with ThreadPoolExecutor() as executor:
-        titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user, current_app._get_current_object()) for keywords in trending_topics]
+        titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user_id, current_app._get_current_object()) for keywords in trending_topics]
         titles = [future.result() for future in titles_futures]
+
+    project_data_model.news_suggestions = {
+        "suggestion_titles": [AssistantHubNewsAlgo.clean_title(title) for title in titles],
+    }
+    db.session.commit()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=news_articles,
-        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
+        suggestion_titles=project_data_model.news_suggestions["suggestion_titles"],
     )
 
 
@@ -264,12 +292,38 @@ def seo_analyzer_places(user, project_id, app):
             status_code=HTTPStatus.BAD_REQUEST,
         )
 
-    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
+    # Due to multiple session used user id needs to be stored in seprate variable
+    user_id = user.id
+
+    project_data_model = (
+        SEOProject.query
+        .filter(
+            SEOProject.id == project_id,
+            SEOProject.user_id == user_id,
+        ).first()
+    )
+
+    if project_data_model is None:
+        return bad_response(
+            message="Project not found",
+            status_code=HTTPStatus.NOT_FOUND,
+        )
+
+    if project_data_model.maps_suggestions is not None:
+        maps_data = AssistantHubMapsAlgo.get_data(project_id)
+
+        return response(
+            success=True,
+            message=constants.SuccessMessage.seo_analysis,
+            data=maps_data,
+            keywords=project_data_model.maps_suggestions["keywords"],
+            geo_distribution=project_data_model.maps_suggestions["geo_distribution"],
+        )
 
     # Generate News search queries using GPT-4
     try:
         maps_search_query = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
-            user=user,
+            user_id=user_id,
             business_type=project_data_model.business_type,
             target_audience=project_data_model.target_audience,
             industry=project_data_model.industry,
@@ -305,15 +359,16 @@ def seo_analyzer_places(user, project_id, app):
     places_data = AssistantHubMapsAlgo.fetch_google_places(maps_search_query[0])
 
     def create_map_analysis(place, title=None, urls=None, keywords=None):
-        return MapsAnalysis(
+        return Analysis(
+            type=constants.ProjectTypeCons.enum_maps,
             address=str(place["address"]),
             map_url=str(place["google_maps_url"]),
             name=str(place["name"]),
-            snippets=str(place["optimized_snippets"]),
+            snippet=str(place["optimized_snippets"]),
             website=str(place.get("website")),
-            website_title=title,
-            website_backlinks=str(urls) if urls else None,
-            website_keywords=str(keywords) if keywords else None,
+            title=title,
+            backlinks=str(urls) if urls else None,
+            keywords=str(keywords) if keywords else None,
             latitude=place["latitude"],
             longitude=place["longitude"],
         )
@@ -323,10 +378,10 @@ def seo_analyzer_places(user, project_id, app):
     def analyze_place(place, app):
         with app.app_context():
             map_model_db = (
-                MapsAnalysis.query
+                Analysis.query
                 .filter(
-                    MapsAnalysis.latitude == place["latitude"],
-                    MapsAnalysis.longitude == place["longitude"],
+                    Analysis.latitude == place["latitude"],
+                    Analysis.longitude == place["longitude"],
                 ).first()
             )
 
@@ -343,7 +398,10 @@ def seo_analyzer_places(user, project_id, app):
             }
 
             if place.get("website"):
-                website_data = AssistantHubMapsAlgo.fetch_website_data(place["website"])
+                try:
+                    website_data = AssistantHubMapsAlgo.fetch_website_data(place["website"])
+                except Exception as e:
+                    website_data = None
 
                 if website_data is not None:
                     title, snippets, urls = website_data
@@ -369,15 +427,15 @@ def seo_analyzer_places(user, project_id, app):
                     map_model_db = create_map_analysis(place)
                     add_commit_(map_model_db)
 
-            search_maps_rel_model = MapsSearchRel.query.filter(
-                MapsSearchRel.search_query_id == search_model.id,
-                MapsSearchRel.maps_analysis_id == map_model_db.id,
+            search_maps_rel_model = SearchAnalysisRel.query.filter(
+                SearchAnalysisRel.search_query_id == search_model.id,
+                SearchAnalysisRel.analysis_id == map_model_db.id,
             ).first()
 
             if search_maps_rel_model is None:
-                search_maps_rel_model = MapsSearchRel(
+                search_maps_rel_model = SearchAnalysisRel(
                     search_query_id=search_model.id,
-                    maps_analysis_id=map_model_db.id
+                    analysis_id=map_model_db.id
                 )
                 add_commit_(search_maps_rel_model)
 
@@ -388,13 +446,19 @@ def seo_analyzer_places(user, project_id, app):
 
     response_places_data = list(response_places_data)
     geo_distribution = AssistantHubMapsAlgo.analyze_georaphic_distribution(places_data)
+    
+    project_data_model.maps_suggestions = {
+        "keywords": list(set_of_keywords),
+        "geo_distribution": geo_distribution,
+    }
+    commit_()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=response_places_data,
-        keywords=list(set_of_keywords),
-        geo_distribution=geo_distribution,
+        keywords=project_data_model.maps_suggestions["keywords"],
+        geo_distribution=project_data_model.maps_suggestions["geo_distribution"],
     )
 
 @internal_error_handler
@@ -404,43 +468,57 @@ def seo_analyzer_search_results(user, project_id):
             message="Project id is required",
         )
 
-    project_data_model = SEOProject.query.filter(SEOProject.id == project_id).first()
-    query = f"{project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country}"
+    user_id = user.id
+
+    project_data_model = (
+        SEOProject.query
+        .filter(
+            SEOProject.id == project_id,
+            SEOProject.user_id == user_id,
+        ).first()
+    )
+
+    if project_data_model is None:
+        return bad_response(
+            message="Project not found",
+            status_code=HTTPStatus.NOT_FOUND,
+        )
+
+    if project_data_model.search_suggestion is not None:
+        search_results = GoogleSearchUtils.get_data(project_id)
+
+        return response(
+            success=True,
+            message=constants.SuccessMessage.seo_analysis,
+            data=search_results,
+            suggestion_titles=project_data_model.search_suggestion["suggestion_titles"],
+        )
+
+    query, search_model_id = GoogleSearchUtils.generate_search_query(project_data_model)
     num_pages = 1
 
-    search_model = SearchQuery.query.filter(
-        SearchQuery.search_query == query,
-        SearchQuery.seo_project_id == project_id,
-        SearchQuery.type == constants.ProjectTypeCons.enum_google_search,
-    ).first()
-
-    if search_model is None:
-        search_model = SearchQuery(
-            search_query=query,
-            seo_project_id=project_id,
-            type=constants.ProjectTypeCons.enum_google_search,
-        )
-        add_commit_(search_model)
-
     # 1. Search Engine Analysis
-    search_results = AssistantHubSEO.fetch_google_search_results(query, num_pages)
-    trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(search_results)
+    search_results = GoogleSearchUtils.fetch_google_search_results(query, num_pages)
+    trending_topics = GoogleSearchUtils.keywords_titles_builder(search_results)
     with ThreadPoolExecutor() as executor:
-        titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user, current_app._get_current_object()) for keywords in trending_topics]
+        titles_futures = [executor.submit(GoogleSearchUtils.generate_title, keywords, user_id, current_app._get_current_object()) for keywords in trending_topics]
         titles = [future.result() for future in titles_futures]
 
     # Optimize database operations
     google_search_analyses = []
     google_search_search_rels = []
+
     for src in search_results:
         src_model = (
-            GoogleSearchAnalysis.query.filter(
-                GoogleSearchAnalysis.link == src.get("link", "")
+            Analysis.query.filter(
+                Analysis.link == src.get("link", ""),
+                Analysis.type == constants.ProjectTypeCons.enum_google_search,
             ).first()
         )
 
         if src_model is None:
-            src_model = GoogleSearchAnalysis(
+            src_model = Analysis(
+                type=constants.ProjectTypeCons.enum_google_search,
                 title=src.get("title", ""),
                 snippet=src.get("snippet", ""),
                 link=src.get("link", ""),
@@ -460,22 +538,23 @@ def seo_analyzer_search_results(user, project_id):
 
     for src in search_results:
         src_model = (
-            GoogleSearchAnalysis.query.filter(
-                GoogleSearchAnalysis.link == src.get("link", "")
+            Analysis.query.filter(
+                Analysis.link == src.get("link", ""),
+                Analysis.type == constants.ProjectTypeCons.enum_google_search,
             ).first()
         )
 
         google_search_rel = (
-            GoogleSearchSearchRel.query.filter(
-                GoogleSearchSearchRel.google_search_analysis_id == src_model.id,
-                GoogleSearchSearchRel.search_query_id == search_model.id
+            SearchAnalysisRel.query.filter(
+                SearchAnalysisRel.analysis_id == src_model.id,
+                SearchAnalysisRel.search_query_id == search_model_id
             ).first()
         )
         
         if google_search_rel is None:
-            google_search_rel = GoogleSearchSearchRel(
-                google_search_analysis_id=src_model.id,
-                search_query_id=search_model.id,
+            google_search_rel = SearchAnalysisRel(
+                analysis_id=src_model.id,
+                search_query_id=search_model_id,
             )
             google_search_search_rels.append(google_search_rel)
 
@@ -483,11 +562,16 @@ def seo_analyzer_search_results(user, project_id):
     db.session.bulk_save_objects(google_search_search_rels)
     db.session.commit()
 
+    project_data_model.search_suggestion = {
+        "suggestion_titles": [GoogleSearchUtils.clean_title(title) for title in titles],
+    }
+    db.session.commit()
+
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=search_results,
-        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
+        suggestion_titles=project_data_model.search_suggestion["suggestion_titles"],
     )
 
 @internal_error_handler
@@ -497,17 +581,36 @@ def seo_analyzer_competitors(user, project_id):
             message="Project id is required",
         )
 
-    project_data_model = SEOProject.query.get(project_id)
+    user_id = user.id
+
+    project_data_model = (
+        SEOProject.query
+        .filter(
+            SEOProject.id == project_id,
+            SEOProject.user_id == user_id,
+        ).first()
+    )
 
     if project_data_model is None:
         return bad_response(
             message="Project not found",
+            status_code=HTTPStatus.NOT_FOUND,
+        )
+
+    if project_data_model.competition_suggestion is not None:
+        comptitor_analysis = CompetitorUtils.get_data(project_id)
+
+        return response(
+            success=True,
+            message=constants.SuccessMessage.seo_analysis,
+            data=comptitor_analysis,
+            suggestion_titles=project_data_model.competition_suggestion["suggestion_titles"],
         )
 
     # Generate YouTube search queries using GPT-4
     try:
         competitor_search_query_arr = CompetitorUtils.generate_competitor_search_text_gpt4(
-            user=user,
+            user_id=user_id,
             business_type=project_data_model.business_type,
             target_audience=project_data_model.target_audience,
             industry=project_data_model.industry,
@@ -547,10 +650,17 @@ def seo_analyzer_competitors(user, project_id):
             if webpage["link"] in urls:
                 continue
 
-            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == webpage["link"]).first()
+            comp_anl_model = (
+                Analysis.query
+                .filter(
+                    Analysis.link == webpage["link"], 
+                    Analysis.type == constants.ProjectTypeCons.enum_competitor,
+                ).first()
+            )
 
             if comp_anl_model is None:
-                comp_anl_model = CompetitorAnalysis(
+                comp_anl_model = Analysis(
+                    type=constants.ProjectTypeCons.enum_competitor,
                     title=webpage.get("title", ""),
                     snippet=webpage.get("snippet", ""),
                     link=webpage.get("link", ""),
@@ -571,20 +681,27 @@ def seo_analyzer_competitors(user, project_id):
     # Create CompetitorSearchRel objects for both new and existing CompetitorAnalysis models
     for search_query_id, webpages in competitor_urls.items():
         for webpage in webpages:
-            comp_anl_model = CompetitorAnalysis.query.filter(CompetitorAnalysis.link == webpage["link"]).first()
+            comp_anl_model = (
+                Analysis.query
+                .filter(
+                    Analysis.link == webpage["link"],
+                    Analysis.type == constants.ProjectTypeCons.enum_competitor,
+                ).first()
+            )
+
             if not comp_anl_model:
                 continue
 
             competitor_search_rel = (
-                CompetitorSearchRel.query.filter(
-                    CompetitorSearchRel.comptitor_analysis_id == comp_anl_model.id,
-                    CompetitorSearchRel.search_query_id == int(search_query_id)
+                SearchAnalysisRel.query.filter(
+                    SearchAnalysisRel.analysis_id == comp_anl_model.id,
+                    SearchAnalysisRel.search_query_id == int(search_query_id)
                 ).first()
             )
 
             if competitor_search_rel is None:
-                competitor_search_rel = CompetitorSearchRel(
-                    comptitor_analysis_id=comp_anl_model.id,
+                competitor_search_rel = SearchAnalysisRel(
+                    analysis_id=comp_anl_model.id,
                     search_query_id=int(search_query_id),
                 )
                 new_competitor_search_rel.append(competitor_search_rel)
@@ -601,14 +718,19 @@ def seo_analyzer_competitors(user, project_id):
     trending_topics = CompetitorUtils.keywords_titles_builder(comptitor_analysis)
 
     with ThreadPoolExecutor() as executor:
-        titles_futures = [executor.submit(CompetitorUtils.generate_title, keywords, current_app._get_current_object()) for keywords in trending_topics]
+        titles_futures = [executor.submit(CompetitorUtils.generate_title, user_id, keywords, current_app._get_current_object()) for keywords in trending_topics]
         titles = [future.result() for future in titles_futures]
+
+    project_data_model.competition_suggestion = {
+        "suggestion_titles": [AssistantHubNewsAlgo.clean_title(title) for title in titles],
+    }
+    db.session.commit()
 
     return response(
         success=True,
         message=constants.SuccessMessage.seo_analysis,
         data=comptitor_analysis,
-        suggestion_titles=[AssistantHubNewsAlgo.clean_title(title) for title in titles],
+        suggestion_titles=project_data_model.competition_suggestion["suggestion_titles"],
     )
 
 @internal_error_handler
@@ -852,6 +974,147 @@ def generate_content(user, type, topic, purpose, keywords, length, urls, user_ip
         message=constants.SuccessMessage.content_generated,
         content=content_data.model_response,
         contentId=content_data.id,
+    )
+
+@internal_error_handler
+def seo_history(user, page=1, per_page=10):
+    seo_projects = (
+        SEOProject.query.filter(
+            SEOProject.user_id == user.id,
+        )
+        .order_by(SEOProject.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    # response_data_for_projects = []
+    # for project in seo_projects:
+    #     searches = (
+    #         SearchQuery.query.filter(
+    #             SearchQuery.user_id == user.id,
+    #             SearchQuery.seo_project_id == project.id,
+    #         ).all()
+    #     )
+
+    #     searches_ids = [search.id for search in searches]
+
+    #     analysis_data = (
+    #         SearchAnalysisRel.query.filter(
+    #             SearchAnalysisRel.search_query_id.in_(searches_ids),
+    #         )
+    #     )
+
+    #     analysis_ids = [analysis.id for analysis in analysis_data]
+
+    #     analysis_data = (
+    #         Analysis.query.filter(
+    #             Analysis.id.in_(analysis_ids),
+    #         ).all()
+    #     )
+
+    #     news_data = []
+    #     competitors_data = []
+    #     search_data = []
+    #     maps_data = []
+
+    #     for analysis in analysis_data:
+    #         if analysis.type == constants.ProjectTypeCons.enum_news:
+    #             response = {
+    #                 "id": analysis.id,
+    #                 "title": analysis.title,
+    #                 "htmlTitle": analysis.html_title,
+    #                 "displayLink": analysis.display_link,
+    #                 "formattedUrl": analysis.formatted_url,
+    #                 "htmlSnippet": analysis.snippet,
+    #                 "kind":analysis.kind,
+    #                 "link":analysis.link,
+    #                 "pagemap":analysis.pagemap,
+    #             }
+
+    #             news_data.append(response)
+            
+    #         elif analysis.type == constants.ProjectTypeCons.enum_competitor:
+    #             response = {
+    #                 "id": analysis.id,
+    #                 "title": analysis.title,
+    #                 "snippet": analysis.snippet,
+    #                 "link":analysis.link,
+    #                 "displayLink": analysis.display_link,
+    #                 "htmlSnippet": analysis.html_snippet,
+    #                 "htmlTitle": analysis.html_title,
+    #                 "pagemap":analysis.pagemap,
+    #                 "kind":analysis.kind,
+    #                 "htmlFormattedUrl": analysis.html_formatted_url,
+    #                 "formattedUrl": analysis.formatted_url,
+    #             }
+
+    #             competitors_data.append(response)
+
+    #         elif analysis.type == constants.ProjectTypeCons.enum_google_search:
+    #             response = {
+    #                 "id": analysis.id,
+    #                 "title": analysis.title,
+    #                 "snippet": analysis.snippet,
+    #                 "link":analysis.link,
+    #                 "displayLink": analysis.display_link,
+    #                 "htmlSnippet": analysis.html_snippet,
+    #                 "htmlTitle": analysis.html_title,
+    #                 "pagemap":analysis.pagemap,
+    #                 "kind":analysis.kind,
+    #                 "htmlFormattedUrl": analysis.html_formatted_url,
+    #                 "formattedUrl": analysis.formatted_url,
+    #             }
+
+    #             search_data.append(response)
+
+    #         elif analysis.type == constants.ProjectTypeCons.enum_maps:
+    #             response = {
+    #                 "id": analysis.id,
+    #                 "title": analysis.title,
+    #                 "address": analysis.address,
+    #                 "google_maps_url": analysis.map_url,
+    #                 "name": analysis.name,
+    #                 "optimized_snippets": analysis.snippet,
+    #                 "website": analysis.website,
+    #                 "backlinks": analysis.backlinks,
+    #                 "keywords": analysis.keywords,
+    #                 "latitude": analysis.latitude,
+    #                 "longitude": analysis.longitude,
+    #             }
+
+    #             maps_data.append(response)
+        
+    #     response_data_for_projects.append({
+    #         "id": project.id,
+    #         "news_data": news_data,
+    #         "news_suggestion_titles": project.news_suggestions,
+    #         "competitors_data": competitors_data,
+    #         "competitors_suggestion_titles": project.competition_suggestion,
+    #         "search_data": search_data,
+    #         "search_suggestion_titles": project.search_suggestion,
+    #         "maps_data": maps_data,
+    #         "maps_suggestions": project.maps_suggestions,
+    #     })
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.seo_analysis,
+        pagination={
+            "page": seo_projects.page,
+            "per_page": seo_projects.per_page,
+            "total_pages": seo_projects.pages,
+            "total_items": seo_projects.total,
+        },
+        seo_projects=[{
+            "content_id": project.id,
+            "created_at": TimeUtils.time_ago(project.created_at),
+            "type": "SEO",
+            "topic": project.business_type,
+            "length": project.industry,
+            "model_response": "",
+            "html_form": "",
+        }
+        for project in seo_projects.items
+        ],
     )
 
 

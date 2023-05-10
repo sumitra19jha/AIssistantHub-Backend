@@ -1,6 +1,9 @@
 import openai
 import yake
 from googleplaces import GooglePlaces
+from api.models.analysis import Analysis
+from api.models.search_analysis_rel import SearchAnalysisRel
+from api.models.search_query import SearchQuery
 from config import Config
 from api.utils import logging_wrapper
 
@@ -11,12 +14,60 @@ import re
 
 import numpy as np
 from sklearn.cluster import KMeans
+from api.assets import constants
 
 
 logger = logging_wrapper.Logger(__name__)
 nlp = spacy.load("en_core_web_sm")
 
 class AssistantHubMapsAlgo:
+    def get_data(project_id):
+        searches = (
+            SearchQuery.query.filter(
+                SearchQuery.seo_project_id == project_id,
+                SearchQuery.type == constants.ProjectTypeCons.enum_maps,
+            ).all()
+        )
+
+        searches_ids = [search.id for search in searches]
+
+        analysis_data = (
+            SearchAnalysisRel.query.filter(
+                SearchAnalysisRel.search_query_id.in_(searches_ids),
+            )
+        )
+
+        analysis_ids = [analysis.analysis_id for analysis in analysis_data]
+        print(analysis_ids)
+
+        analysis_data = (
+            Analysis.query.filter(
+                Analysis.id.in_(analysis_ids),
+                Analysis.type == constants.ProjectTypeCons.enum_maps,
+            ).all()
+        )
+
+        maps_data = []
+
+        for analysis in analysis_data:
+            response = {
+                "id": analysis.id,
+                "title": analysis.title,
+                "address": analysis.address,
+                "google_maps_url": analysis.map_url,
+                "name": analysis.name,
+                "optimized_snippets": analysis.snippet,
+                "website": analysis.website,
+                "backlinks": analysis.backlinks,
+                "keywords": analysis.keywords,
+                "latitude": analysis.latitude,
+                "longitude": analysis.longitude,
+            }
+
+            maps_data.append(response)
+
+        return maps_data
+
     def analyze_georaphic_distribution(array_of_maps_data):
         if not array_of_maps_data:
             return {}  # Return an empty dictionary if the input is empty
@@ -45,7 +96,7 @@ class AssistantHubMapsAlgo:
         return cluster_summary
 
     # Fetch News search text
-    def generate_maps_search_text_gpt4(user, business_type, target_audience, industry, location):
+    def generate_maps_search_text_gpt4(user_id, business_type, target_audience, industry, location):
         try:
             system_prompt = {
                 "role": "system",
@@ -64,7 +115,7 @@ class AssistantHubMapsAlgo:
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0,
-                user=str(user.id),
+                user=str(user_id),
             )
 
             # Extract and format search queries as an array

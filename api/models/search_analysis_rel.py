@@ -1,44 +1,36 @@
 import copy
+import enum
 
 from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
+from api.assets import constants
 from api.models import db
+from api.models.search_query import SearchQuery
+from api.models.analysis import Analysis
+
 
 @dataclass
-class GoogleSearchAnalysis(db.Model):
-    __tablename__ = "google_search_analysis"
+class SearchAnalysisRel(db.Model):
+    __tablename__ = "search_analysis_rel"
 
     id: int
-    display_link: str
-    formatted_url: str
-    html_formatted_url: str
-    html_snippet: str
-    html_title: str
-    kind: str
-    link: str
-    pagemap: object
-    snippet: str
-    title: str
+    search_query_id: int
+    analysis_id: int
 
     created_at: dt
     updated_at: dt
 
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
-    display_link = db.Column(db.String(255), nullable=True)
-    formatted_url = db.Column(db.Text, nullable=True)
-    html_formatted_url = db.Column(db.Text, nullable=True)
-    html_snippet = db.Column(db.Text, nullable=True)
-    html_title = db.Column(db.Text, nullable=True)
-    kind = db.Column(db.String(255), nullable=True)
-    link = db.Column(db.String(255), nullable=False)
-    pagemap = db.Column(db.JSON, nullable=True)
-    snippet = db.Column(db.Text, nullable=True)
-    title = db.Column(db.String(255), nullable=False)
+    search_query_id = db.Column(db.Integer, db.ForeignKey(SearchQuery.id), nullable=False)
+    analysis_id = db.Column(db.Integer, db.ForeignKey(Analysis.id), nullable=False)
 
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=dt.utcnow, default=dt.utcnow, nullable=False)
+
+    search_query = db.relationship(SearchQuery, backref="search_analysis_rel", lazy=True)
+    analysis = db.relationship(Analysis, backref="search_analysis_rel", lazy=True)
 
     def to_dict(self):
         assert self.id is not None

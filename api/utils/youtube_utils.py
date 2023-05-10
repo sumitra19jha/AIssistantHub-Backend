@@ -14,10 +14,10 @@ from nltk.corpus import stopwords
 
 from gensim.models import TfidfModel
 from gensim.corpora import Dictionary
+from api.models.analysis import Analysis
+from api.models.search_analysis_rel import SearchAnalysisRel
 
 from api.models.search_query import SearchQuery
-from api.models.youtube_search_video_rel import YouTubeSearchVideoRel
-from api.models.youtube_video_analysis import YouTubeVideoAnalysis
 from api.utils.db import add_commit_
 from api.assets import constants
 
@@ -111,10 +111,11 @@ class YotubeSEOUtils:
                             thumbnail_url = search_result["snippet"]["thumbnails"]["default"]["url"]
                             video_duration = parse_duration(video_info["contentDetails"]["duration"]).total_seconds()
 
-                            video_model = YouTubeVideoAnalysis.query.filter(YouTubeVideoAnalysis.video_id == video_id).first()
+                            video_model = Analysis.query.filter(Analysis.video_id == video_id).first()
 
                             if video_model is None:
-                                video_model = YouTubeVideoAnalysis(
+                                video_model = Analysis(
+                                    type=constants.ProjectTypeCons.enum_youtube,
                                     video_id=video_id,
                                     video_url=video_url,
                                     thumbnail_url=thumbnail_url,
@@ -133,15 +134,15 @@ class YotubeSEOUtils:
                             if video_model not in video_response:
                                 video_response.append(video_model)
 
-                            search_video_rel_model = YouTubeSearchVideoRel.query.filter(
-                                YouTubeSearchVideoRel.search_query_id == search_model.id,
-                                YouTubeSearchVideoRel.youtube_video_analysis_id == video_model.id
+                            search_video_rel_model = SearchAnalysisRel.query.filter(
+                                SearchAnalysisRel.search_query_id == search_model.id,
+                                SearchAnalysisRel.analysis_id == video_model.id
                             ).first()
 
                             if search_video_rel_model is None:
-                                search_video_rel_model = YouTubeSearchVideoRel(
+                                search_video_rel_model = SearchAnalysisRel(
                                     search_query_id=search_model.id,
-                                    youtube_video_analysis_id=video_model.id,
+                                    analysis_id=video_model.id,
                                 )
                                 add_commit_(search_video_rel_model)
 

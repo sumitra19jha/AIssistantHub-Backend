@@ -17,8 +17,8 @@ from sklearn.cluster import KMeans
 from gensim.models.coherencemodel import CoherenceModel
 from concurrent.futures import ThreadPoolExecutor
 
-from api.models.news_analysis import NewsAnalysis
-from api.models.news_search_rel import NewsSearchRel
+from api.models.analysis import Analysis
+from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
 
 from api.assets import constants
@@ -29,6 +29,51 @@ from config import Config
 logger = logging_wrapper.Logger(__name__)
 
 class AssistantHubNewsAlgo:
+    def get_data(project_id):
+        searches = (
+            SearchQuery.query.filter(
+                SearchQuery.seo_project_id == project_id,
+                SearchQuery.type == constants.ProjectTypeCons.enum_news,
+            ).all()
+        )
+
+        searches_ids = [search.id for search in searches]
+
+        analysis_data = (
+            SearchAnalysisRel.query.filter(
+                SearchAnalysisRel.search_query_id.in_(searches_ids),
+            )
+        )
+
+        analysis_ids = [analysis.analysis_id for analysis in analysis_data]
+        print(analysis_ids)
+
+        analysis_data = (
+            Analysis.query.filter(
+                Analysis.id.in_(analysis_ids),
+                Analysis.type == constants.ProjectTypeCons.enum_news,
+            ).all()
+        )
+
+        news_data = []
+
+        for analysis in analysis_data:
+            response = {
+                "id": analysis.id,
+                "title": analysis.title,
+                "htmlTitle": analysis.html_title,
+                "displayLink": analysis.display_link,
+                "formattedUrl": analysis.formatted_url,
+                "htmlSnippet": analysis.snippet,
+                "kind":analysis.kind,
+                "link":analysis.link,
+                "pagemap":analysis.pagemap,
+            }
+
+            news_data.append(response)
+
+        return news_data
+
     def clean_title(title):
         # Remove characters like "\", "/", and quotes
         cleaned_title = re.sub(r'[\\\/"]', '', title)
@@ -103,7 +148,7 @@ class AssistantHubNewsAlgo:
         return trending_topics
 
     # Generating content titles
-    def generate_title(keywords, user, app):
+    def generate_title(keywords, user_id, app):
         with app.app_context():
             # Join the top keywords with a comma
             keywords_str = ", ".join([keyword[0] for keyword in keywords])
@@ -125,7 +170,7 @@ class AssistantHubNewsAlgo:
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0,
-                user=str(user.id),
+                user=str(user_id),
             )
 
             # Extract and format the title
@@ -208,8 +253,9 @@ class AssistantHubNewsAlgo:
                     news_article_items = results.get('items', [])
                     fetched_news_articles.extend(news_article_items)
 
-                    existing_news_articles = NewsAnalysis.query.filter(
-                        NewsAnalysis.link.in_([news_article["link"] for news_article in news_article_items])
+                    existing_news_articles = Analysis.query.filter(
+                        Analysis.link.in_([news_article["link"] for news_article in news_article_items]),
+                        Analysis.type == constants.ProjectTypeCons.enum_news,
                     ).all()
 
                     existing_news_article_links = {article.link: article for article in existing_news_articles}
@@ -218,7 +264,8 @@ class AssistantHubNewsAlgo:
                     ]
 
                     for news_article_map in new_news_articles:
-                        model_article = NewsAnalysis(
+                        model_article = Analysis(
+                            type=constants.ProjectTypeCons.enum_news,
                             title=news_article_map["title"],
                             html_title=news_article_map["htmlTitle"],
                             display_link=news_article_map["displayLink"],
@@ -235,15 +282,15 @@ class AssistantHubNewsAlgo:
                     for news_article_map in news_article_items:
                         model_article = existing_news_article_links[news_article_map["link"]]
 
-                        search_news_rel_model = NewsSearchRel.query.filter(
-                            NewsSearchRel.search_query_id == search_model.id,
-                            NewsSearchRel.news_analysis_id == model_article.id
+                        search_news_rel_model = SearchAnalysisRel.query.filter(
+                            SearchAnalysisRel.search_query_id == search_model.id,
+                            SearchAnalysisRel.analysis_id == model_article.id
                         ).first()
 
                         if search_news_rel_model is None:
-                            search_news_rel_model = NewsSearchRel(
+                            search_news_rel_model = SearchAnalysisRel(
                                 search_query_id=search_model.id,
-                                news_analysis_id=model_article.id
+                                analysis_id=model_article.id
                             )
                             add_commit_(search_news_rel_model)
                 else:

@@ -19,19 +19,20 @@ class ProjectTypeEnums(str, enum.Enum):
 @dataclass
 class SearchQuery(db.Model):
     __tablename__ = "search_query"
-    
+
     id: int
+    type:str
     search_query: str
     seo_project_id: int
 
     created_at: dt
     updated_at: dt
-    
+
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     type = db.Column(db.Enum(ProjectTypeEnums), nullable=False)
     search_query = db.Column(db.Text, nullable=False)
     seo_project_id = db.Column(db.Integer, db.ForeignKey(SEOProject.id), nullable=False)
-    
+
     created_at = db.Column(db.DateTime, default=dt.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=dt.utcnow, default=dt.utcnow, nullable=False)
 
