@@ -1,29 +1,27 @@
 import json
 import bcrypt
+
 from google.oauth2 import id_token
 from google.auth.transport import requests as g_requests
 from datetime import datetime as dt, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 from http import HTTPStatus
-
 from sqlalchemy import or_
 
+from api.models.purchase import Purchase
+from api.models.purchase_history import PurchaseHistory
 from api.utils import logging_wrapper
 from api.utils.otp import verify_otp
 from api.utils.otp import generate_otp
 from api.utils.db import add_flush_, commit_
 from api.utils.send_email import send_otp_email
 from api.utils.request import bad_response, response
-
 from api.middleware.error_handlers import internal_error_handler
-
 from api.models.user import User
 from api.models import db
 from api.models.session import Session
-from api.models.subscriptions import Subscription
-from api.models.subscription_type import SubscriptionType
-
 from api.assets import constants
+
 from config import Config
 
 
@@ -58,20 +56,26 @@ def create_user(**kwargs):
     return user
 
 def create_free_use_subscription(user):
-    subs = Subscription(
+    purch = Purchase(
         user_id=user.id,
-        subscription_type_id=1,
-        valid_till=(dt.utcnow() + timedelta(days=7)),
+        points=100,
     )
-    add_flush_(subs)
+    add_flush_(purch)
 
-    return subs
+    purch_history = PurchaseHistory(
+        purchase_id=purch.id,
+        amount=0.0,
+    )
+    add_flush_(purch_history)
+
+    return purch, purch_history
 
 def create_user_session(
     login_method=None, device_details=None, ip_address=None, **kwargs
 ):
     kwargs.setdefault(constants.UserCons.status, constants.UserCons.enum_status_active)
     user = create_user(**kwargs)
+    purch, purch_history = create_free_use_subscription(user)
     session = create_session(
         user_id=user.id,
         login_method=login_method,
@@ -79,7 +83,7 @@ def create_user_session(
         ip_address=ip_address,
     )
     commit_()  # TODO - @shivam - keep commits in main controller functions so that we know.
-    return user, session
+    return user, session, purch, purch_history
 
 
 @internal_error_handler
@@ -155,7 +159,7 @@ def oauth_google(token_id, device_details=None, ip_address=None):
     # Create new user
     else:
         new_user = True
-        user, session = create_user_session(
+        user, session, purch, purch_history = create_user_session(
             name=name,
             email=email,
             oauth_id_google=oauth_id_google,
@@ -612,21 +616,20 @@ def user_logout(session, session_id):
 @internal_error_handler
 def user_subscriptions(user):
     subscriptions = (
-        Subscription.query
-        .filter(Subscription.user_id == user.id)
+        Purchase.query
+        .filter(Purchase.user_id == user.id)
         .all()
     )
 
     user_subs = []
     for subscription in subscriptions:
-        months_diff = relativedelta(subscription.valid_till, subscription.started_on).months
+        purchase_history = PurchaseHistory.query.filter(PurchaseHistory.purchase_id == subscription.id).first()
+
         subscription_data = {
             "date": subscription.created_at.strftime("%Y-%m-%d"),
-            "name": "Proton",
-            "cycle": f"-",
-            "salary": 0,
-            "status": "Freemium",
-            "resume": "/proton/resume",
+            "points": subscription.points,
+            "price": purchase_history.amount,
+            "status": "Activated",
         }
         user_subs.append(subscription_data)
 
@@ -636,18 +639,35 @@ def user_subscriptions(user):
         subscriptions=user_subs,
     )
 
+@internal_error_handler
+def user_points(user):
+    all_purchase = (
+        Purchase.query
+        .filter(Purchase.user_id == user.id)
+        .all()
+    )
+
+    points = 0
+    for purchase in all_purchase:
+        points += purchase.points
+
+    return response(
+        success=True,
+        message=constants.SuccessMessage.logged_out,
+        points=points,
+    )
+
 
 @internal_error_handler
 def user_subscriptions_ai_details(user):
     subscriptions = (
-        Subscription.query
-        .filter(Subscription.user_id == user.id)
+        Purchase.query
+        .filter(Purchase.user_id == user.id)
         .all()
     )
 
     user_subs = []
     for subscription in subscriptions:
-        months_diff = relativedelta(subscription.valid_till, subscription.started_on).months
         subscription_data = {
             "date": subscription.created_at.strftime("%Y-%m-%d"),
             "name": "Proton",
