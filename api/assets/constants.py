@@ -132,6 +132,15 @@ class ErrorMessage:
     add_liveclass_audience_to_class = "Failed to add users to class"
 
 
+class ProjectTypeCons:
+    enum_youtube = "youtube"
+    enum_news = "news"
+    enum_maps = "maps"
+    enum_google_search = "google_search"
+    enum_competitor = "competitor"
+    enum_reddit = "reddit"
+
+
 class UserCons:
     status = "status"
 
@@ -165,3 +174,5 @@ class SuccessMessage:
     logged_out = "User logged out successfully"
     content_generated = "Successfully, Generated the content."
     content_history = "Successfully, Fetched the content history."
+    keywords="Successfully fetched keywords"
+    seo_analysis="Successfully fetched seo analysis"
