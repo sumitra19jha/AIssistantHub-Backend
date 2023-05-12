@@ -120,10 +120,11 @@ class AssistantHubMapsAlgo:
 
             # Extract and format search queries as an array
             search_queries = assistant_response["choices"][0]["message"]["content"].strip().split("\n")
-            return search_queries
+            total_tokens = assistant_response['usage']['total_tokens']
+            return search_queries, total_tokens
         except Exception as e:
             logger.exception(str(e))
-            return None
+            return None, 0
 
     # Uses Google Places API for search based on user Input
     # The current form of Query for Search is:

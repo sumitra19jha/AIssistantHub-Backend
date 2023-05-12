@@ -21,9 +21,10 @@ class GeneratorModels:
                 user=str(user.id),
                 frequency_penalty=0,
             )
-            return assistant_response
+            total_tokens = assistant_response['usage']['total_tokens']
+            return assistant_response, total_tokens
         except Exception as e:
-            return None
+            return None, 0
 
     def generate_title_templates(user, business_type, target_audience, industry, location, num_templates=5):
         try:

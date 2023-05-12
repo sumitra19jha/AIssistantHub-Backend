@@ -14,10 +14,11 @@ class ClassifierModels:
             )
 
             response_text = str(response['choices'][0]["text"]).lower()
+            total_tokens = response['usage']['total_tokens']
             if 'yes' in response_text:
-                return True
+                return True, total_tokens
             else:
-                return False
+                return False, total_tokens
         except Exception as e:
             print(e)
-            return False
+            return False, 0

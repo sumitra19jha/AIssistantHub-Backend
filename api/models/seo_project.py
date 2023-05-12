@@ -21,6 +21,7 @@ class SEOProject(db.Model):
     industry: str
     goals: str
     country: str
+    country_code:str
     user_ip: str
     youtube_suggestions: object
     news_suggestions: object
@@ -37,6 +38,7 @@ class SEOProject(db.Model):
     industry = db.Column(db.String(100), nullable=False)
     goals = db.Column(db.String(500), nullable=True)
     country = db.Column(db.String(100), nullable=True)
+    country_code = db.Column(db.String(2), nullable=True)
     user_ip = db.Column(db.String(50), nullable=True)
     youtube_suggestions = db.Column(db.JSON, nullable=True)
     maps_suggestions = db.Column(db.JSON, nullable=True)
