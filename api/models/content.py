@@ -41,6 +41,7 @@ class Content(db.Model):
     keywords:str
     length:str
     status: str
+    urls: object
 
     platform:str
     purpose:str
@@ -61,14 +62,15 @@ class Content(db.Model):
     type = db.Column(db.Enum(ContentTypeEnums), default=ContentTypeEnums.BLOG_POST, nullable=False)
     topic=db.Column(db.Text, nullable=False)
     keywords=db.Column(db.Text, nullable=True)
+    urls=db.Column(db.JSON, nullable=True)
     length=db.Column(db.Enum(ContentLengthEnums), default=ContentLengthEnums.SHORT, nullable=False)
     status = db.Column(db.Enum(ContentStatusEnums), nullable=True)
 
     platform=db.Column(db.String(255), nullable=True)
     purpose=db.Column(db.String(255), nullable=True)
-    system_message=db.Column(db.Text, nullable=False)
-    user_message=db.Column(db.Text, nullable=False)
-    model=db.Column(db.String(255), nullable=False)
+    system_message=db.Column(db.Text, nullable=True)
+    user_message=db.Column(db.Text, nullable=True)
+    model=db.Column(db.String(255), nullable=True)
     model_response=db.Column(db.Text, nullable=True)
     content_data=db.Column(db.Text, nullable=True)
     no_of_prompt_tokens = db.Column(db.Integer, nullable=True)

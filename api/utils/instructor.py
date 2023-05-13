@@ -6,6 +6,21 @@ from api.utils.dashboard import DashboardUtils
 
 
 class Instructor:
+    def initiate_chat_instruction_for_social_media(name_of_user, content_data):
+        system_chat_prompt = ChatPrompt.social_media_system_chat_prompt()
+        user_prompt_generated_by_system = ChatPrompt.social_media_user_chat_prompt_by_system(
+            platform=DashboardUtils.format_string_for_chat(content_data.platform),
+            topic=DashboardUtils.format_string_for_chat(content_data.topic),
+            user_name=name_of_user,
+            type=DashboardUtils.format_string_for_chat(content_data.type),
+        )
+
+        system_chat_instruction = ChatDataModelUtil.set_chat_instruction_for_system_from_content(content_data, system_chat_prompt)
+        user_chat_initiation = ChatDataModelUtil.initiate_chat_for_user_from_content(content_data, user_prompt_generated_by_system)
+
+        db.session.add_all([system_chat_instruction, user_chat_initiation])
+        db.session.commit()
+
     def handle_chat_instruction_for_social_media(name_of_user, content_data, is_opinion, web_searched_results=None):
         system_chat_prompt = ChatPrompt.social_media_system_chat_prompt()
         

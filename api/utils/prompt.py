@@ -14,7 +14,7 @@ class PromptGenerator:
 
         return system_message, user_message
 
-    def generate_messages_for_social_media(topic, platform, length, content_length):
+    def generate_messages_for_social_media(topic, platform, content_length, length=None):
         if platform == "LINKEDIN":
             system_message = ContentPrompt.linkedin_system_message
             user_message = ContentPrompt.linkedin_user_message(
