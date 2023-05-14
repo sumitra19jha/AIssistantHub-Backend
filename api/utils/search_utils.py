@@ -87,6 +87,7 @@ class GoogleSearchUtils:
         return query, search_model.id
 
     def fetch_google_search_results(query, num_pages=1):
+        total_point = 0.0
         search_articles = []
 
         for i in range(num_pages):
@@ -110,7 +111,9 @@ class GoogleSearchUtils:
                 logger.exception(f"Error: {response.status_code}")
                 print(f"Error: {response.status_code}")
                 continue
-        return search_articles
+
+        total_point += 0.0005 * len(search_articles)
+        return search_articles, total_point
 
     # Preprocessing function
     def preprocess(text):
@@ -160,7 +163,8 @@ class GoogleSearchUtils:
             print("The topics are not coherent enough. Please try again later.")
 
         # Clustering using KMeans
-        kmeans = KMeans(n_clusters=5)
+        n_clusters = min(5, len(dense_tfidf_corpus))
+        kmeans = KMeans(n_clusters=n_clusters, n_init=10)
         clusters = kmeans.fit_predict(dense_tfidf_corpus)
 
         # Analyzing trends and events
@@ -202,7 +206,8 @@ class GoogleSearchUtils:
 
             # Extract and format the title
             title = assistant_response["choices"][0]["message"]["content"].strip()
-            return title
+            total_tokens = assistant_response['usage']['total_tokens']
+            return title, total_tokens
 
     def clean_title(title):
         # Remove characters like "\", "/", and quotes

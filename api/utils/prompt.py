@@ -7,18 +7,18 @@ class PromptGenerator:
         if platform == "LINKEDIN":
             system_message = ContentPrompt.linkedin_system_message_for_opinion
             user_message = ContentPrompt.linkedin_user_message_for_opinion(
-                topic=topic, 
+                topic=topic,
                 websites_content=web_content, 
                 content_length=content_length,
             )
 
         return system_message, user_message
 
-    def generate_messages_for_social_media(topic, platform, length, content_length):
+    def generate_messages_for_social_media(topic, platform, content_length, length=None):
         if platform == "LINKEDIN":
             system_message = ContentPrompt.linkedin_system_message
             user_message = ContentPrompt.linkedin_user_message(
-                topic=topic, 
+                topic=topic,
                 content_length=content_length,
             )
 

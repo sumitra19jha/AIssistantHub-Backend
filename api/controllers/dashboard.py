@@ -1,3 +1,4 @@
+import math
 from bs4 import BeautifulSoup
 from http import HTTPStatus
 from concurrent.futures import ThreadPoolExecutor
@@ -7,6 +8,7 @@ import concurrent.futures
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
 from api.models.analysis import Analysis
+from api.models.purchase import Purchase
 from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
 
@@ -38,9 +40,32 @@ from api.utils.youtube_utils import YotubeSEOUtils
 
 logger = logging_wrapper.Logger(__name__)
 
+def is_user_have_sufficient_points(user_id):
+    purchase = (
+        Purchase.query
+        .filter(
+            Purchase.user_id == user_id,
+            Purchase.points > 0,
+        )
+        .first()
+    )
+
+    if purchase is None:
+        return False, None
+    
+    return True, purchase
+
 
 @internal_error_handler
 def seo_analyzer_create_project(user, business_type, target_audience, industry, goals, user_ip):
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+    
     # Validate input
     validation_response = APIInputValidator.validate_input_for_seo(
         business_type,
@@ -53,13 +78,16 @@ def seo_analyzer_create_project(user, business_type, target_audience, industry, 
         return validation_response
 
     overall_goals = ", ".join(goals)
-    country_name = AssistantHubScrapper.get_country_name_from_ip(user_ip)
+    country_name, country_code = AssistantHubScrapper.get_country_name_and_code_from_ip(user_ip)
 
     if country_name is None:
         country_name = "India"
 
+    if country_code is None:
+        country_code = "IN"
+
     try:
-        youtube_seo_data_model = SEOProject(
+        seo_project = SEOProject(
             user_id=user.id,
             business_type=business_type,
             target_audience=target_audience,
@@ -67,8 +95,9 @@ def seo_analyzer_create_project(user, business_type, target_audience, industry, 
             goals=overall_goals,
             country=country_name,
             user_ip=user_ip,
+            country_code=country_code,
         )
-        add_commit_(youtube_seo_data_model)
+        add_commit_(seo_project)
     except Exception as e:
         logger.exception(e)
         return bad_response(
@@ -80,7 +109,7 @@ def seo_analyzer_create_project(user, business_type, target_audience, industry, 
     return response(
         success=True,
         message="Project created successfully",
-        data=youtube_seo_data_model.to_dict(),
+        data=seo_project.to_dict(),
     )
 
 @internal_error_handler
@@ -202,6 +231,15 @@ def seo_analyzer_youtube(user, project_id):
 
 @internal_error_handler
 def seo_analyzer_news(user, project_id):
+    points = 0.0
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
     if project_id is None:
         return bad_response(
             message="Project id is required",
@@ -237,14 +275,15 @@ def seo_analyzer_news(user, project_id):
 
     # Generate News search queries using GPT-4
     try:
-        # news_search_query = AssistantHubNewsAlgo.generate_news_search_text_gpt4(
-        #     user=user,
-        #     business_type=business_type,
-        #     target_audience=target_audience,
-        #     industry=industry,
-        #     location=country_name
-        # )
-        news_search_query = [f"1. {project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country} news"]
+        news_search_query = AssistantHubNewsAlgo.generate_news_search_text_gpt4(
+            user=user,
+            business_type=project_data_model.business_type,
+            target_audience=project_data_model.target_audience,
+            industry=project_data_model.industry,
+            location=project_data_model.country
+        )
+        print(news_search_query)
+        # news_search_query = [f"1. {project_data_model.business_type} {project_data_model.target_audience} {project_data_model.industry} {project_data_model.country} news"]
     except Exception as e:
         logger.exception(str(e))
         return response(
@@ -252,10 +291,10 @@ def seo_analyzer_news(user, project_id):
             message=f"Error generating search query: {str(e)}"
         )
 
-    news_array_of_search = DashboardUtils.preprocess_pointwise_search_array(news_search_query)
+    # news_array_of_search = DashboardUtils.preprocess_pointwise_search_array(news_search_query)
 
     # Remove short search queries
-    news_array_of_search = [query for query in news_array_of_search if len(query) >= 5]
+    news_array_of_search = [query for query in news_search_query if len(query) >= 5]
 
     if not news_array_of_search:
         return response(
@@ -263,17 +302,23 @@ def seo_analyzer_news(user, project_id):
             message="Unable to generate the search query.",
         )
 
-    news_articles = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id)
+    news_articles, total_points = AssistantHubNewsAlgo.fetch_google_news(news_array_of_search, project_id, project_data_model.country_code)
+    points += total_points
+
     trending_topics = AssistantHubNewsAlgo.keywords_titles_builder(news_articles)
 
     # seo_analyzer_news function
     with ThreadPoolExecutor() as executor:
         titles_futures = [executor.submit(AssistantHubNewsAlgo.generate_title, keywords, user_id, current_app._get_current_object()) for keywords in trending_topics]
-        titles = [future.result() for future in titles_futures]
-
+        titles_results = [future.result() for future in titles_futures]
+        titles, total_tokens_list = zip(*titles_results)
+        total_tokens_gpt4 = sum(total_tokens_list)
+        
+    points = points + ((total_tokens_gpt4 * 0.02)/1000)
     project_data_model.news_suggestions = {
         "suggestion_titles": [AssistantHubNewsAlgo.clean_title(title) for title in titles],
     }
+    purchase.points = purchase.points - math.ceil((points * 100))
     db.session.commit()
 
     return response(
@@ -286,6 +331,15 @@ def seo_analyzer_news(user, project_id):
 
 @internal_error_handler
 def seo_analyzer_places(user, project_id, app):
+    points = 0.0
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
     if project_id is None:
         return bad_response(
             message="Project id is required",
@@ -322,13 +376,14 @@ def seo_analyzer_places(user, project_id, app):
 
     # Generate News search queries using GPT-4
     try:
-        maps_search_query = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
+        maps_search_query, total_tokens = AssistantHubMapsAlgo.generate_maps_search_text_gpt4(
             user_id=user_id,
             business_type=project_data_model.business_type,
             target_audience=project_data_model.target_audience,
             industry=project_data_model.industry,
             location=project_data_model.country
         )
+        points = points + ((total_tokens * 0.03)/1000)
     except Exception as e:
         logger.exception(str(e))
         return response(
@@ -357,6 +412,7 @@ def seo_analyzer_places(user, project_id, app):
         add_commit_(search_model)
 
     places_data = AssistantHubMapsAlgo.fetch_google_places(maps_search_query[0])
+    points += 0.02
 
     def create_map_analysis(place, title=None, urls=None, keywords=None):
         return Analysis(
@@ -451,6 +507,7 @@ def seo_analyzer_places(user, project_id, app):
         "keywords": list(set_of_keywords),
         "geo_distribution": geo_distribution,
     }
+    purchase.points = purchase.points - math.ceil((points * 100))
     commit_()
 
     return response(
@@ -463,6 +520,15 @@ def seo_analyzer_places(user, project_id, app):
 
 @internal_error_handler
 def seo_analyzer_search_results(user, project_id):
+    points = 0.0
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
     if project_id is None:
         return bad_response(
             message="Project id is required",
@@ -498,11 +564,17 @@ def seo_analyzer_search_results(user, project_id):
     num_pages = 1
 
     # 1. Search Engine Analysis
-    search_results = GoogleSearchUtils.fetch_google_search_results(query, num_pages)
+    search_results, total_point = GoogleSearchUtils.fetch_google_search_results(query, num_pages)
+    points += total_point
+
     trending_topics = GoogleSearchUtils.keywords_titles_builder(search_results)
     with ThreadPoolExecutor() as executor:
         titles_futures = [executor.submit(GoogleSearchUtils.generate_title, keywords, user_id, current_app._get_current_object()) for keywords in trending_topics]
-        titles = [future.result() for future in titles_futures]
+        titles_results = [future.result() for future in titles_futures]
+        titles, total_tokens_list = zip(*titles_results)
+        total_tokens_gpt4 = sum(total_tokens_list)
+
+    points = points + ((total_tokens_gpt4 * 0.02)/1000)
 
     # Optimize database operations
     google_search_analyses = []
@@ -565,6 +637,7 @@ def seo_analyzer_search_results(user, project_id):
     project_data_model.search_suggestion = {
         "suggestion_titles": [GoogleSearchUtils.clean_title(title) for title in titles],
     }
+    purchase.points = purchase.points - math.ceil((points * 100))
     db.session.commit()
 
     return response(
@@ -576,13 +649,21 @@ def seo_analyzer_search_results(user, project_id):
 
 @internal_error_handler
 def seo_analyzer_competitors(user, project_id):
+    points = 0.0
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+    
     if project_id is None:
         return bad_response(
             message="Project id is required",
         )
 
     user_id = user.id
-
     project_data_model = (
         SEOProject.query
         .filter(
@@ -609,13 +690,14 @@ def seo_analyzer_competitors(user, project_id):
 
     # Generate YouTube search queries using GPT-4
     try:
-        competitor_search_query_arr = CompetitorUtils.generate_competitor_search_text_gpt4(
+        competitor_search_query_arr, total_tokens_gpt4 = CompetitorUtils.generate_competitor_search_text_gpt4(
             user_id=user_id,
             business_type=project_data_model.business_type,
             target_audience=project_data_model.target_audience,
             industry=project_data_model.industry,
             location=project_data_model.country,
         )
+        points = points + ((total_tokens_gpt4 * 0.02)/1000)
     except Exception as e:
         logger.exception(str(e))
         return response(
@@ -636,7 +718,8 @@ def seo_analyzer_competitors(user, project_id):
         )
 
     # Competition Analysis
-    competitor_urls = CompetitorUtils.fetch_competitors(competitor_array_of_search, project_id)
+    competitor_urls, total_point = CompetitorUtils.fetch_competitors(competitor_array_of_search, project_id, project_data_model.country_code)
+    points = points + total_point
 
     comptitor_analysis = []
     urls = []
@@ -719,11 +802,16 @@ def seo_analyzer_competitors(user, project_id):
 
     with ThreadPoolExecutor() as executor:
         titles_futures = [executor.submit(CompetitorUtils.generate_title, user_id, keywords, current_app._get_current_object()) for keywords in trending_topics]
-        titles = [future.result() for future in titles_futures]
+        titles_results = [future.result() for future in titles_futures]
+        titles, total_tokens_list = zip(*titles_results)
+        total_tokens_gpt4 = sum(total_tokens_list)
+
+    points = points + ((total_tokens_gpt4 * 0.02)/1000)
 
     project_data_model.competition_suggestion = {
         "suggestion_titles": [AssistantHubNewsAlgo.clean_title(title) for title in titles],
     }
+    purchase.points = purchase.points - math.ceil((points * 100))
     db.session.commit()
 
     return response(
@@ -777,6 +865,15 @@ def seo_analyzer_online_forums(user, business_type, target_audience, industry, g
 
 @internal_error_handler
 def generate_content_for_social_media(user, topic, platform, keywords, length, urls, user_ip):
+    is_allowed, purchase = is_user_have_sufficient_points(user.id)
+
+    if not is_allowed:
+        return bad_response(
+            message="You don't have enough points to create a project.",
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+    points = 0.0
     validation_response = APIInputValidator.validate_content_input_for_social_media(
         topic,
         platform,
@@ -806,14 +903,21 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
             status_code=HTTPStatus.BAD_REQUEST,
         )
 
-    is_opinion = ClassifierModels.is_the_topic_opinion_based(
-        processed_input['topic'])
+    is_opinion, total_tokens = ClassifierModels.is_the_topic_opinion_based(
+        processed_input['topic'],
+    )
+
+    # Cost of Classification
+    points = points + ((total_tokens * 0.02)/1000)
 
     if is_opinion:
-        web_searched_results = AssistantHubScrapper.search_and_crawl(
+        web_searched_results, total_point = AssistantHubScrapper.search_and_crawl(
             processed_input['topic'],
             user_ip,
         )
+
+        # Cost of Crawl
+        points = points + total_point
 
         web_content = ""
         for result in web_searched_results:
@@ -848,14 +952,21 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
     )
 
     try:
-        assistant_response = GeneratorModels.generate_content(
-            user, system_message, user_message)
+        assistant_response, total_tokens = GeneratorModels.generate_content(
+            user, system_message, user_message
+        )
+
+        # Cost of Generation
+        points = points + ((total_tokens * 0.03)/1000)
+
         ContentDataModel.update_content_model_after_successful_ai_response(
-            assistant_response, content_data)
+            assistant_response, content_data
+        )
     except Exception as e:
         assistant_response = None
         ContentDataModel.update_content_model_after_failed_ai_response(
-            content_data)
+            content_data
+        )
 
     if assistant_response == None:
         return response(
@@ -876,6 +987,9 @@ def generate_content_for_social_media(user, topic, platform, keywords, length, u
         content_data.id,
         content_data.user_id,
     )
+
+    purchase.points = purchase.points - math.ceil((points * 100))
+    db.session.commit()
 
     return response(
         success=True,
@@ -1123,7 +1237,7 @@ def content_history(user, page=1, per_page=10):
     contents_data = (
         Content.query.filter(
             Content.user_id == user.id,
-            Content.status == constants.ContentStatus.SUCCESS,
+            Content.content_data != None,
         )
         .order_by(Content.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)

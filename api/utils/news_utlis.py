@@ -132,7 +132,8 @@ class AssistantHubNewsAlgo:
             print("The topics are not coherent enough. Please try again later.")
 
         # Clustering using KMeans
-        kmeans = KMeans(n_clusters=5)
+        n_clusters = min(5, len(dense_tfidf_corpus))
+        kmeans = KMeans(n_clusters=n_clusters, n_init=10)
         clusters = kmeans.fit_predict(dense_tfidf_corpus)
 
         # Analyzing trends and events
@@ -175,14 +176,15 @@ class AssistantHubNewsAlgo:
 
             # Extract and format the title
             title = assistant_response["choices"][0]["message"]["content"].strip()
-            return title
+            total_tokens = assistant_response['usage']['total_tokens']
+            return title, total_tokens
 
     # Fetch News search text
     def generate_news_search_text_gpt4(user, business_type, target_audience, industry, location):
         try:
             system_prompt = {
                 "role": "system",
-                "content": "You are a News Search Query Writer AI assistant. Your primary work is to write search queries on google based on user input that provides relevant results which will be helpful for users.\n\nYour response should be pointwise."
+                "content": "You are a News Search Query Writer AI assistant. Your primary work is to write search queries on google based on user input that provides relevant news result.\n\nYour response should be a single search query."
             }
 
             user_prompt = {
@@ -210,7 +212,8 @@ class AssistantHubNewsAlgo:
     # Uses Google News API for search based on user Input
     # The current form of Query for Search is:
     #   "{business_type} {target_audience} {industry} {goals}"
-    def fetch_google_news(query_arr, project_id, num_results=5):
+    def fetch_google_news(query_arr, project_id, country_code, num_results=5):
+        total_points = 0.0
         news_articles = []
         base_url = 'https://www.googleapis.com/customsearch/v1'
 
@@ -243,6 +246,7 @@ class AssistantHubNewsAlgo:
                     'sort': 'date',  # Sort results by recency
                     'lr': 'lang_en',  # Fetch articles in English
                     'tbm': 'nws',  # Filter results to news articles only
+                    'gl': country_code,
                 }
 
                 response = requests.get(base_url, params=params)
@@ -251,7 +255,6 @@ class AssistantHubNewsAlgo:
                 if response.status_code == 200:
                     results = response.json()
                     news_article_items = results.get('items', [])
-                    fetched_news_articles.extend(news_article_items)
 
                     existing_news_articles = Analysis.query.filter(
                         Analysis.link.in_([news_article["link"] for news_article in news_article_items]),
@@ -264,6 +267,9 @@ class AssistantHubNewsAlgo:
                     ]
 
                     for news_article_map in new_news_articles:
+                        if news_article_map["title"] == "Untitled":
+                            continue
+                        
                         model_article = Analysis(
                             type=constants.ProjectTypeCons.enum_news,
                             title=news_article_map["title"],
@@ -277,6 +283,7 @@ class AssistantHubNewsAlgo:
                         )
 
                         add_commit_(model_article)
+                        fetched_news_articles.append(news_article_map)
                         existing_news_article_links[news_article_map["link"]] = model_article
 
                     for news_article_map in news_article_items:
@@ -307,4 +314,6 @@ class AssistantHubNewsAlgo:
                 if result is not None:
                     news_articles.extend(result)
         
-        return news_articles
+        total_points = total_points + (len(query_arr) * 0.0005)
+        
+        return news_articles, total_points

@@ -93,13 +93,15 @@ class CompetitorUtils:
 
             # Extract and format search queries as an array
             search_queries = assistant_response["choices"][0]["message"]["content"].strip().split("\n")
-            return search_queries
+            total_tokens = assistant_response['usage']['total_tokens']
+            return search_queries, total_tokens
         except Exception as e:
             logger.exception(str(e))
-            return None
+            return None, 0
 
     
-    def fetch_competitors(query_arr, project_id, max_results=5):
+    def fetch_competitors(query_arr, project_id, country_code, max_results=5):
+        total_point = 0.0
         competitor_urls = {}
         url = "https://www.googleapis.com/customsearch/v1"
             
@@ -124,6 +126,7 @@ class CompetitorUtils:
                     "cx": Config.CUSTOM_SEARCH_ENGINE_ID,
                     "q": query,
                     'num': max_results,
+                    'gl': country_code,
                 }
 
                 response = requests.get(url, params=params)
@@ -134,8 +137,9 @@ class CompetitorUtils:
             except HTTPError as e:
                 logger.exception(str(e))
                 continue
-        
-        return competitor_urls
+
+        total_point = len(competitor_urls) * 0.0005
+        return competitor_urls, total_point
 
     # Preprocessing function
     def preprocess(text):
@@ -185,7 +189,8 @@ class CompetitorUtils:
             print("The topics are not coherent enough. Please try again later.")
 
         # Clustering using KMeans
-        kmeans = KMeans(n_clusters=5)
+        n_clusters = min(5, len(dense_tfidf_corpus))
+        kmeans = KMeans(n_clusters=n_clusters, n_init=10)
         clusters = kmeans.fit_predict(dense_tfidf_corpus)
 
         # Analyzing trends and events
@@ -227,4 +232,5 @@ class CompetitorUtils:
 
             # Extract and format the title
             title = assistant_response["choices"][0]["message"]["content"].strip()
-            return title
+            total_tokens = assistant_response['usage']['total_tokens']
+            return title, total_tokens

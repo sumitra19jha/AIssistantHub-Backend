@@ -253,6 +253,29 @@ def user_subscriptions():
         user=request.user
     )
 
+@bp.route("/points", methods=["GET"])
+@authenticate
+def user_points():
+    """This is subscriptions api.
+    ---
+    tags:
+        - User
+    parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+          example: Bearer 52Y6QUDNSF2XRH43SUK3GSBMGUFZ08PNBOXSAO7QWQI6JJWAYN0F1GS5UA4W15XF3DJR7M369GOX8WDVXYZC2VBL2U2EHDZ9EABO
+        required: true
+
+    responses:
+      200:
+        description: In response, success and message are sent. Frontend should logout after successful response.
+    """
+    return user_controller.user_points(
+        user=request.user
+    )
+
 @bp.route("/ai/details", methods=["GET"])
 @authenticate
 def user_subscriptions_ai_details():

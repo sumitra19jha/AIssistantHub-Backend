@@ -33,6 +33,20 @@ class AssistantHubScrapper:
             print(f"Error fetching country name: {e}")
             return None
 
+    def get_country_name_and_code_from_ip(ip_address):
+        try:
+            response = requests.get(f"http://ip-api.com/json/{ip_address}")
+            response.raise_for_status()
+            data = response.json()
+
+            if data['status'] == 'success':
+                return data['country'].lower(), data['countryCode'].lower()
+            else:
+                return None, None
+        except Exception as e:
+            print(f"Error fetching country name: {e}")
+            return None, None
+
     def fetch_url_content(url):
         try:
             response = requests.get(url, timeout=10)
@@ -103,15 +117,22 @@ class AssistantHubScrapper:
     def google_search(query, user_location=None):
         service = build("customsearch", "v1", developerKey=API_KEY)
         search_params = {'q': query, 'cx': CUSTOM_SEARCH_ENGINE_ID}
+
         if user_location:
             search_params['gl'] = user_location.upper()
+        
         results = service.cse().list(**search_params).execute()
         return results.get('items', [])
 
     def search_and_crawl(query, user_ip, max_total_tokens=1000):
+        total_point = 0.0
         country_code = AssistantHubScrapper.get_country_code_from_ip(user_ip)
-        print(f"Country code: {country_code}")
+        
+        if not country_code:
+            country_code = 'IN'
+        
         search_results = AssistantHubScrapper.google_search(query, country_code)
+        total_point += 0.0005
 
         all_contents = []
         total_tokens = 0
@@ -141,4 +162,4 @@ class AssistantHubScrapper:
                 all_contents.append(content_map)
                 time.sleep(1)  # Respect the website's rate limits
 
-        return all_contents
+        return all_contents, total_point
