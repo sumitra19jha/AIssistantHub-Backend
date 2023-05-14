@@ -81,7 +81,7 @@ def requires_basic_auth(f):
     """Decorator to require HTTP Basic Auth for your endpoint."""
 
     def check_auth(username, password):
-        return username == "learngram-admin" and password == "Learngram@55$"
+        return username == Config.SWAGGER_USERNAME and password == Config.SWAGGER_PASSWORD
 
     def authenticate():
         return Response(
@@ -106,7 +106,7 @@ app.config["SWAGGER"] = {
     "description": "This is a KeywordIQ Backend APIs",
     "version": "1.0.0",
     "termsOfService": "link here",
-    "contact": {"email": "sumitra19jha@gmail.com"},
+    "contact": {"email": Config.SWAGGER_EMAIL},
     "ui_params": {"displayRequestDuration": "true"},
 }
 

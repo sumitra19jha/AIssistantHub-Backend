@@ -1237,7 +1237,7 @@ def content_history(user, page=1, per_page=10):
     contents_data = (
         Content.query.filter(
             Content.user_id == user.id,
-            Content.status == constants.ContentStatus.SUCCESS,
+            Content.content_data != None,
         )
         .order_by(Content.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
