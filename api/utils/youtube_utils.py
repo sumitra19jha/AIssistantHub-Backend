@@ -14,7 +14,7 @@ from nltk.corpus import stopwords
 
 from gensim.models import TfidfModel
 from gensim.corpora import Dictionary
-from api.models.analysis import Analysis
+from api.models.analytics import Analysis
 from api.models.search_analysis_rel import SearchAnalysisRel
 
 from api.models.search_query import SearchQuery

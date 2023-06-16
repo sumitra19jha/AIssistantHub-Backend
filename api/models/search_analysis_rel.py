@@ -8,7 +8,7 @@ from datetime import timezone
 from api.assets import constants
 from api.models import db
 from api.models.search_query import SearchQuery
-from api.models.analysis import Analysis
+from api.models.analytics import Analysis
 
 
 @dataclass

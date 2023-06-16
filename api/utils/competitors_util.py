@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from gensim.matutils import corpus2dense
 from gensim.models.coherencemodel import CoherenceModel
 from gensim.models import TfidfModel, LdaModel
-from api.models.analysis import Analysis
+from api.models.analytics import Analysis
 from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
 

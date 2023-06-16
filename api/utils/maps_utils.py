@@ -1,7 +1,7 @@
 import openai
 import yake
 from googleplaces import GooglePlaces
-from api.models.analysis import Analysis
+from api.models.analytics import Analysis
 from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
 from config import Config

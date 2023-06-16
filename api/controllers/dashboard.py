@@ -7,7 +7,7 @@ from flask import current_app, session
 import concurrent.futures
 from api.middleware.error_handlers import internal_error_handler
 from api.assets import constants
-from api.models.analysis import Analysis
+from api.models.analytics import Analysis
 from api.models.purchase import Purchase
 from api.models.search_analysis_rel import SearchAnalysisRel
 from api.models.search_query import SearchQuery
