@@ -24,8 +24,35 @@ from api.assets import constants
 
 from config import Config
 
+from api.controllers.purchase import PhonePePayment
+from flask import Flask, jsonify, request
 
 logger = logging_wrapper.Logger(__name__)
+
+def initiate_user_payment(user):
+    phonepe = PhonePePayment()
+    # assuming transaction details are stored in the user model
+    payment_url = phonepe.initiate_payment(user.transaction_details) 
+    return payment_url
+
+def purchase_subscription(user):
+    payment_url = initiate_user_payment(user)
+    return payment_url
+
+app = Flask(__name__)
+
+@app.route('/purchase', methods=['POST'])
+def purchase():
+    user_id = request.json.get('user_id')
+    user = User.query.get(user_id)  # or any other method you use to get a user
+    
+    if user is not None:
+        payment_url = purchase_subscription(user)
+        return jsonify({'message': 'Payment initiated', 'payment_url': payment_url}), 200
+    else:
+        return jsonify({'message': 'User not found'}), 404
+
+    
 
 def create_session(user_id, login_method, device_details=None, ip_address=None):
     if device_details is not None and ip_address is not None:
